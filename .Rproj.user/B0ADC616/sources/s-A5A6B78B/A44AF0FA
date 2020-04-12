@@ -5,14 +5,14 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "3674709704",
+    "hash" : "3774423704",
     "id" : "A44AF0FA",
-    "lastKnownWriteTime" : 1586731872,
-    "last_content_update" : 1586731872237,
+    "lastKnownWriteTime" : 1586732267,
+    "last_content_update" : 1586732267211,
     "path" : "~/Documents/GitHub/significant-game/config.toml",
     "project_path" : "config.toml",
     "properties" : {
-        "cursorPosition" : "9,64",
+        "cursorPosition" : "0,46",
         "scrollLine" : "0"
     },
     "read_only" : false,

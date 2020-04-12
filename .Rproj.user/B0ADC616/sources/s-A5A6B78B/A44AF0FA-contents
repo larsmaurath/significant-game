@@ -1,4 +1,4 @@
-baseurl = "https://example.org/"
+baseurl = "https://www.thesignificantgame.com/"
 title = "Significant Game"
 theme = "hugo-creative-portfolio-theme"
 languageCode = "en-us"
