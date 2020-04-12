@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Significant Game</title>
+    <link>/</link>
+    <description>Recent content on Significant Game</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 01 Apr 2018 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Is possession data getting more extreme?</title>
+      <link>/portfolio/is-possession-data-getting-more-extreme/</link>
+      <pubDate>Sun, 01 Apr 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/is-possession-data-getting-more-extreme/</guid>
+      <description>The possession metric is probably one of the football statistics which is cited most often. It has gained even more media attention since we have seen larger divergence in possession across teams. Oversimplified game approaches of teams are often broadly categorized between possession-oriented and counter-attacking: think about Barcelona/Bayern Munich/Manchester City vs Chelsea/Borussia Dortmund/Liverpool.
+At first glance the possession statistic seems to be fairly trivial: who controls most of the ball during the 90 minutes?</description>
+    </item>
+    
+  </channel>
+</rss>
