@@ -1,0 +1,259 @@
+---
+title: Quantifying Injury Rates
+author: Significant Game
+date: '2018-09-15'
+slug: quantifying-injury-rates
+categories: []
+tags:
+  - injuries
+image: 'img/portfolio/injuries.png'
+showonlyimage: no
+---
+
+
+```{r Load Libraries, echo = FALSE, warning = FALSE, message = FALSE}
+library("DBI")
+library("plyr")
+library("dplyr")
+library("ggplot2")
+library("zoo")
+```
+
+```{r Load Data, echo = FALSE, warning = FALSE, message = FALSE}
+con <- dbConnect(RSQLite::SQLite(), dbname = '~/Documents/Jupyter/footballData.sqlite')
+
+value_table <- dbGetQuery(con, 'SELECT * from Value')
+injury_table <- dbGetQuery(con, 'SELECT * from Injuries')
+
+dbDisconnect(con)
+```
+
+```{r Data Wrangling, echo = FALSE, warning = FALSE, message = FALSE}
+#Filter table and reformat raw data
+
+injury_table$team <- gsub(" \\(Detailansicht\\)", "", injury_table$team)
+injury_table$match <- toupper(injury_table$match)
+
+injury_table <- injury_table %>% filter(season %in% c("2017/2018", "2016/2017", "2015/2016", "2014/2015", "2013/2014"))
+
+injury_table$match <- as.numeric(injury_table$match)
+
+injury_table <- injury_table %>% 
+  mutate(date = if_else(match < 19, as.POSIXct(paste(substr(season, start = 1, stop = 4), "0831", sep = ""), format = "%Y%m%d"), as.POSIXct(paste(substr(season, start = 6, stop = 9), "0131", sep = ""), format = "%Y%m%d")))
+
+value_table$date <- as.POSIXct(value_table$date, format = "%d.%m.%Y")
+
+```
+
+```{r Merge Injury and Market Value, echo = FALSE, warning = FALSE, message = FALSE}
+#Interpolate market value data to the dates of the injury data and join the two data sets
+
+date_vector <- unique(unlist(injury_table$date))
+  
+my.func<- function(i) {
+  estimate <- approx(i$date,
+                     i$value,
+                     xout = date_vector,
+                     method = "constant", 
+                     rule = 2)
+  return(data.frame(date = estimate$x, value = estimate$y, player_id = unique(i$player_id)))  
+}
+
+int_value_table <- ddply(value_table, .(player_id),  my.func)
+
+joined_df <- inner_join(injury_table, int_value_table, by = c("player_id", "date"))
+
+```
+
+```{r Prepare for Plot, echo = FALSE, warning = FALSE, message = FALSE}
+#We are grouping the injury status into available and unavailable
+
+joined_df <- joined_df %>%
+  dplyr::filter(!(status %in% c("other team", "pausing" )))
+
+joined_df$status_clean[joined_df$status %in% c("squad", "starting", "substituted", "suspended")] <- "available"
+joined_df$status_clean[joined_df$status %in% c("injured")] <- "unavailable"
+
+results <- joined_df %>% 
+  dplyr::group_by(team, match, season, status_clean) %>% 
+  dplyr::summarise(value = sum(value)) %>%
+  dplyr::mutate(freq = value / sum(value))
+
+results$date <- paste(results$season, results$match, sep = "_")
+
+results$dummy <- "Each Bar Represents One Match"
+#results$team <- "Real Madrid"
+
+#results$match_id <- if_else(results$match == "AF", 1, if_else(results$match %in% c("VF", "Vf"), 2, if_else(results$match %in% #c("AF", "Af"), 3, if_else(results$match %in% c("HF", "Hf"), 3, if_else(results$match %in% c("FIN", "Fin"), 4, 0)))))
+
+
+results <- results %>%
+  dplyr::filter(!(status_clean %in% c("available")))
+
+average <- mean(results[["freq"]], na.rm = TRUE)
+
+```
+
+
+Being a Bayern Munich supporter, injuries have been a big part of past campaigns. During most of the past season (2017/2018) Manuel Neuer was injured with a broken foot. For the second match against Real Madrid in the Champions League semi finals the team had to additionally compensate the injuries of Jérôme Boateng, Arturo Vidal, Kingsley Coman and Arjen Robben. While Pep Guardiola was still coach at Bayern his dispute with the long-serving team doctor Mueller-Wohlfahrt culminated into him resigning after 38 years with the team (Mueller-Wohlfahrt was later reinstated in 2017).
+
+## The Data
+
+There is not a lot of structured and comparable data out there on injuries and time lost due to injuries (at least not that I am aware of). The great (German) website [fussballverletzungen.com](http://fussballverletzungen.com/){target="_blank"} regularly surveys type, duration and frequency of all injuries across the Bundesliga. Transfermarkt has a pretty detailed overview of missed matches for each player, but it makes it hard to compare the impact across teams. We need to aggregate this data for each team and normalize it.
+
+### A few things we should aim to adjust for to make the comparison meaningful:
+
+- Squad size varies considerably across teams. To show two extremes: Borussia Dortmund starts the current season with 29 players, Bayern Munich with 23. Simply comparing the absolute number of players injured will therefore distort the picture
+- The Transfermarkt data frequently includes youth players in the squad. An injury of such a player would be less severe for a team compared to a regular first-team player.
+
+To mitigate the above problems I will weigh each player by their relative contribution to the team's market value. We will therefore both adjust for the squad sizes and for the relative importance of each player. One downside is that we will naturally overweight younger players compared to older players. Another option may be to weigh by player strength (e.g. FIFA rating) but I currently do not have these readily available.
+
+To begin I will below show a time series of *% of players injured (weighted by market value)* for some of the top European clubs. The data is for their domestic league and covers the past five completed seasons: 2013/2014 to 2017/2018.
+
+To introduce some kind of relative benchmark I computed the average of the above statistics for the covered clubs across all seasons: on average 14.8% of players are injured at any given time.
+
+Find below the plots split by league starting with the Bundesliga starring Bayern Munich and Borussia Dortmund.
+
+### Bundesliga
+
+```{r Plot Bundesliga, echo = FALSE, warning = FALSE, message = FALSE}
+results_bundesliga <- results %>% filter(team %in% c("FC Bayern München", "Borussia Dortmund"))
+
+theme_set(theme_bw())
+
+p <- ggplot(data = results_bundesliga, aes(x = match)) + 
+  geom_area(aes(y = rollmean(freq, 5, na.pad = TRUE), col = team, fill = team), position = position_dodge(1.0), alpha = 0.5) +
+  geom_hline(yintercept = average, linetype = "dashed") +
+  #annotate("text", min(results$match), 0.1481, vjust = +1.5, hjust = -1, label = "Average") +
+  facet_grid(. ~ season) + 
+  labs(title = "Percentage of Squad Injured - Bundesliga") + 
+  labs(subtitle = "Weighted by Transfer Value | Dashed Line Shows European Average") + 
+  coord_cartesian(ylim = c(0,0.4)) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) + 
+  theme(plot.title = element_text(face = "bold")) +
+  theme(axis.text.x = element_text(angle = 90, size = 11)) + 
+  theme(axis.text.y = element_text(size = 11)) + 
+  theme(axis.title.y = element_blank()) + 
+  theme(axis.title.x = element_blank()) + 
+  theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(0.5, 'cm'), legend.text = element_text(size = 12))
+
+p
+```
+
+Both Bayern and Dortmund have a problem with a high injury rate across their players. They consistently have a larger-than-average percentage of their squad injured. This is even more surprising as the Bundesliga has both fewer games each season than the other four leagues, and also the longest break around New Year which should be beneficial for regeneration. The Bundesliga is also one of the less competitive leagues which should give at least Bayern plenty of opportunity to rest key players.
+
+### Premier League
+
+```{r Plot Premier League, echo = FALSE, warning = FALSE, message = FALSE}
+results_premier_league <- results %>% filter(team %in% c("FC Arsenal", "Manchester City"))
+
+theme_set(theme_bw())
+
+p <- ggplot(data = results_premier_league, aes(x = match)) + 
+  geom_area(aes(y = rollmean(freq, 5, na.pad = TRUE), col = team, fill = team), position = position_dodge(1.0), alpha = 0.5) +
+  geom_hline(yintercept = average, linetype = "dashed") +
+  #annotate("text", min(results$match), 0.1481, vjust = +1.5, hjust = -1, label = "Average") +
+  facet_grid(. ~ season) + 
+  labs(title = "Percentage of Squad Injured - Premier League") + 
+  labs(subtitle = "Weighted by Transfer Value | Dashed Line Shows European Average") + 
+  coord_cartesian(ylim = c(0,0.4)) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) + 
+  theme(plot.title = element_text(face = "bold")) +
+  theme(axis.text.x = element_text(angle = 90, size = 11)) + 
+  theme(axis.text.y = element_text(size = 11)) + 
+  theme(axis.title.y = element_blank()) + 
+  theme(axis.title.x = element_blank()) + 
+  theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(0.5, 'cm'), legend.text = element_text(size = 12))
+
+p
+```
+
+Over the first three seasons covered Arsenal showed high injury rates but has greatly improved them since 2016. It will be interesting to observe if this continues or if this is just a blip caused by them only playing the Europa League last season. We see a similar but not as extreme pattern for Manchester City.
+
+### La Liga
+
+```{r Plot La Liga, echo = FALSE, warning = FALSE, message = FALSE}
+results_la_liga <- results %>% filter(team %in% c("Atlético Madrid", "FC Barcelona", "Real Madrid"))
+
+theme_set(theme_bw())
+
+p <- ggplot(data = results_la_liga, aes(x = match)) + 
+  geom_area(aes(y = rollmean(freq, 5, na.pad = TRUE), col = team, fill = team), position = position_dodge(1.0), alpha = 0.5) +
+  geom_hline(yintercept = average, linetype = "dashed") +
+  #annotate("text", min(results$match), 0.1481, vjust = +1.5, hjust = -1, label = "Average") +
+  facet_grid(. ~ season) + 
+  labs(title = "Percentage of Squad Injured - La Liga") + 
+  labs(subtitle = "Weighted by Transfer Value | Dashed Line Shows European Average") + 
+  coord_cartesian(ylim = c(0,0.4)) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) + 
+  theme(plot.title = element_text(face = "bold")) +
+  theme(axis.text.x = element_text(angle = 90, size = 11)) + 
+  theme(axis.text.y = element_text(size = 11)) + 
+  theme(axis.title.y = element_blank()) + 
+  theme(axis.title.x = element_blank()) + 
+  theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(0.5, 'cm'), legend.text = element_text(size = 12))
+
+p
+```
+
+All three Spanish teams show low injury rates. Especially Atletico and Barcelona show consistently low rates. Given all three teams play in a very competitive league and usually have the additional burden of Champions League matches this is astonishing. FYI, the two sudden spikes we observe for Barcelona are caused by short-term injuries of Messi.
+
+### Serie A
+
+```{r Plot Serie A, echo = FALSE, warning = FALSE, message = FALSE}
+results_serie_a <- results %>% filter(team %in% c("Juventus Turin"))
+
+theme_set(theme_bw())
+
+p <- ggplot(data = results_serie_a, aes(x = match)) + 
+  geom_area(aes(y = rollmean(freq, 5, na.pad = TRUE), col = team, fill = team), position = position_dodge(1.0), alpha = 0.5) +
+  geom_hline(yintercept = average, linetype = "dashed") +
+  #annotate("text", min(results$match), 0.1481, vjust = +1.5, hjust = -1, label = "Average") +
+  facet_grid(. ~ season) + 
+  labs(title = "Percentage of Squad Injured - Serie A") + 
+  labs(subtitle = "Weighted by Transfer Value | Dashed Line Shows European Average") + 
+  coord_cartesian(ylim = c(0,0.4)) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) + 
+  theme(plot.title = element_text(face = "bold")) +
+  theme(axis.text.x = element_text(angle = 90, size = 11)) + 
+  theme(axis.text.y = element_text(size = 11)) + 
+  theme(axis.title.y = element_blank()) + 
+  theme(axis.title.x = element_blank()) + 
+  theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(0.5, 'cm'), legend.text = element_text(size = 12))
+
+p
+```
+
+Not much to say about Juventus. They seem to be able to keep injury rates pretty low and constant.
+
+### Ligue 1
+
+```{r Plot Ligue 1, echo = FALSE, warning = FALSE, message = FALSE}
+results_ligue_1 <- results %>% filter(team %in% c("FC Paris Saint-Germain"))
+
+theme_set(theme_bw())
+
+p <- ggplot(data = results_ligue_1, aes(x = match)) + 
+  geom_area(aes(y = rollmean(freq, 5, na.pad = TRUE), col = team, fill = team), position = position_dodge(1.0), alpha = 0.5) +
+  geom_hline(yintercept = average, linetype = "dashed") +
+  #annotate("text", min(results$match), 0.1481, vjust = +1.5, hjust = -1, label = "Average") +
+  facet_grid(. ~ season) + 
+  labs(title = "Percentage of Squad Injured - Ligue 1") + 
+  labs(subtitle = "Weighted by Transfer Value | Dashed Line Shows European Average") + 
+  coord_cartesian(ylim = c(0,0.4)) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) + 
+  theme(plot.title = element_text(face = "bold")) +
+  theme(axis.text.x = element_text(angle = 90, size = 11)) + 
+  theme(axis.text.y = element_text(size = 11)) + 
+  theme(axis.title.y = element_blank()) + 
+  theme(axis.title.x = element_blank()) + 
+  theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(0.5, 'cm'), legend.text = element_text(size = 12))
+
+p
+```
+
+For PSG we uncover some of the extremes driven by our methodology. For the majority of the analyzed period PSG shows a below-average injury rate. However the injury of Neymar at then end of the 2017/2018 season heavily distorts the picture. With an estimated transfer value of €180m Euros he makes up roughly 20% of PSG's team value alone.   
+
+### Next Steps
+
+There are a bunch of questions you can tackle with this kind of data. Are there any teams which are just better at preventing injuries? Does the data change if we split injuries into *preventable* (muscle injuries) and *non-preventable* (illnesses and broken bones)? Are players with a history of severe injuries more injury-prone going forward? Is there a correlation between workload/matches played and injury rates?

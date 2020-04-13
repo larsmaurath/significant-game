@@ -1,0 +1,6 @@
+"0","con <- dbConnect(RSQLite::SQLite(), dbname = '~/Documents/Jupyter/footballData.sqlite')"
+"0",""
+"0","value_table <- dbGetQuery(con, 'SELECT * from Value')"
+"0","injury_table <- dbGetQuery(con, 'SELECT * from Injuries')"
+"0",""
+"0","dbDisconnect(con)"

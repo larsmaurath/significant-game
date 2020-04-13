@@ -1,0 +1,59 @@
+---
+title: Quantifying Injury Rates
+author: Significant Game
+date: '2018-09-15'
+slug: quantifying-injury-rates
+categories: []
+tags:
+  - injuries
+image: 'img/portfolio/injuries.png'
+showonlyimage: no
+---
+
+
+
+<p>Being a Bayern Munich supporter, injuries have been a big part of past campaigns. During most of the past season (2017/2018) Manuel Neuer was injured with a broken foot. For the second match against Real Madrid in the Champions League semi finals the team had to additionally compensate the injuries of Jérôme Boateng, Arturo Vidal, Kingsley Coman and Arjen Robben. While Pep Guardiola was still coach at Bayern his dispute with the long-serving team doctor Mueller-Wohlfahrt culminated into him resigning after 38 years with the team (Mueller-Wohlfahrt was later reinstated in 2017).</p>
+<div id="the-data" class="section level2">
+<h2>The Data</h2>
+<p>There is not a lot of structured and comparable data out there on injuries and time lost due to injuries (at least not that I am aware of). The great (German) website <a href="http://fussballverletzungen.com/" target="_blank">fussballverletzungen.com</a> regularly surveys type, duration and frequency of all injuries across the Bundesliga. Transfermarkt has a pretty detailed overview of missed matches for each player, but it makes it hard to compare the impact across teams. We need to aggregate this data for each team and normalize it.</p>
+<div id="a-few-things-we-should-aim-to-adjust-for-to-make-the-comparison-meaningful" class="section level3">
+<h3>A few things we should aim to adjust for to make the comparison meaningful:</h3>
+<ul>
+<li>Squad size varies considerably across teams. To show two extremes: Borussia Dortmund starts the current season with 29 players, Bayern Munich with 23. Simply comparing the absolute number of players injured will therefore distort the picture</li>
+<li>The Transfermarkt data frequently includes youth players in the squad. An injury of such a player would be less severe for a team compared to a regular first-team player.</li>
+</ul>
+<p>To mitigate the above problems I will weigh each player by their relative contribution to the team’s market value. We will therefore both adjust for the squad sizes and for the relative importance of each player. One downside is that we will naturally overweight younger players compared to older players. Another option may be to weigh by player strength (e.g. FIFA rating) but I currently do not have these readily available.</p>
+<p>To begin I will below show a time series of <em>% of players injured (weighted by market value)</em> for some of the top European clubs. The data is for their domestic league and covers the past five completed seasons: 2013/2014 to 2017/2018.</p>
+<p>To introduce some kind of relative benchmark I computed the average of the above statistics for the covered clubs across all seasons: on average 14.8% of players are injured at any given time.</p>
+<p>Find below the plots split by league starting with the Bundesliga starring Bayern Munich and Borussia Dortmund.</p>
+</div>
+<div id="bundesliga" class="section level3">
+<h3>Bundesliga</h3>
+<p><img src="/portfolio/2018-09-15-quantifying-injury-rates_files/figure-html/Plot%20Bundesliga-1.png" width="672" /></p>
+<p>Both Bayern and Dortmund have a problem with a high injury rate across their players. They consistently have a larger-than-average percentage of their squad injured. This is even more surprising as the Bundesliga has both fewer games each season than the other four leagues, and also the longest break around New Year which should be beneficial for regeneration. The Bundesliga is also one of the less competitive leagues which should give at least Bayern plenty of opportunity to rest key players.</p>
+</div>
+<div id="premier-league" class="section level3">
+<h3>Premier League</h3>
+<p><img src="/portfolio/2018-09-15-quantifying-injury-rates_files/figure-html/Plot%20Premier%20League-1.png" width="672" /></p>
+<p>Over the first three seasons covered Arsenal showed high injury rates but has greatly improved them since 2016. It will be interesting to observe if this continues or if this is just a blip caused by them only playing the Europa League last season. We see a similar but not as extreme pattern for Manchester City.</p>
+</div>
+<div id="la-liga" class="section level3">
+<h3>La Liga</h3>
+<p><img src="/portfolio/2018-09-15-quantifying-injury-rates_files/figure-html/Plot%20La%20Liga-1.png" width="672" /></p>
+<p>All three Spanish teams show low injury rates. Especially Atletico and Barcelona show consistently low rates. Given all three teams play in a very competitive league and usually have the additional burden of Champions League matches this is astonishing. FYI, the two sudden spikes we observe for Barcelona are caused by short-term injuries of Messi.</p>
+</div>
+<div id="serie-a" class="section level3">
+<h3>Serie A</h3>
+<p><img src="/portfolio/2018-09-15-quantifying-injury-rates_files/figure-html/Plot%20Serie%20A-1.png" width="672" /></p>
+<p>Not much to say about Juventus. They seem to be able to keep injury rates pretty low and constant.</p>
+</div>
+<div id="ligue-1" class="section level3">
+<h3>Ligue 1</h3>
+<p><img src="/portfolio/2018-09-15-quantifying-injury-rates_files/figure-html/Plot%20Ligue%201-1.png" width="672" /></p>
+<p>For PSG we uncover some of the extremes driven by our methodology. For the majority of the analyzed period PSG shows a below-average injury rate. However the injury of Neymar at then end of the 2017/2018 season heavily distorts the picture. With an estimated transfer value of €180m Euros he makes up roughly 20% of PSG’s team value alone.</p>
+</div>
+<div id="next-steps" class="section level3">
+<h3>Next Steps</h3>
+<p>There are a bunch of questions you can tackle with this kind of data. Are there any teams which are just better at preventing injuries? Does the data change if we split injuries into <em>preventable</em> (muscle injuries) and <em>non-preventable</em> (illnesses and broken bones)? Are players with a history of severe injuries more injury-prone going forward? Is there a correlation between workload/matches played and injury rates?</p>
+</div>
+</div>
