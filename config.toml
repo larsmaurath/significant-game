@@ -12,7 +12,7 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
 [params]
   # Style options: default (pink), blue, green, pink, red, sea, violet
   # Use custom.css for your custom styling
-  style = "default"
+  style = "green"
   description = "Describe your website"
   sidebarAbout = [
     "Soccer is not only just the beautiful game, it is also a significant one.", 
