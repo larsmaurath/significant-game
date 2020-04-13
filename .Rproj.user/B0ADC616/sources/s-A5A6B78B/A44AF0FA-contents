@@ -5,7 +5,7 @@ languageCode = "en-us"
 # Enable comments by entering your Disqus shortname
 disqusShortname = "https://https-www-thesignificantgame-com"
 # Enable Google Analytics by entering your tracking code
-googleAnalytics = ""
+googleAnalytics = "UA-156024236-3"
 
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
 
