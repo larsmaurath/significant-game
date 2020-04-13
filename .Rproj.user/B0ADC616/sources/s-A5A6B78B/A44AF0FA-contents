@@ -37,4 +37,4 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
 
   [params.social]
   twitter       = "https://twitter.com/thesignigame"
-  github        = "https://github.com/significantgame"
+  github        = "https://github.com/larsmaurath/significant-game"
