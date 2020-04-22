@@ -1,0 +1,43 @@
+---
+title: Lionel Messi - Free Kick Dashboard
+author: Lars Maurath
+date: '2020-04-20'
+slug: lionel-messi-free-kick-dashboard
+categories: []
+tags:
+  - messi
+  - shotmap
+  - shiny
+image: 'img/portfolio/messi.png'
+showonlyimage: no
+---
+
+I finally had some time to play around with the free Statsbomb [data](https://github.com/statsbomb/open-data){target="_blank"}. I previously wanted to look into using the [crosstalk](https://rstudio.github.io/crosstalk/){target="_blank"} package to link interactive charts and this data set which includes all of Messi's La Liga free kicks gave me a good excuse. 
+
+<center>
+[Launch Dashboard](https://larsmaurath.shinyapps.io/messidashboard/){target="_blank"}
+</center>  
+<br>
+
+The initial idea was to link the location of free kicks to their goal impact (or their impact outside of the goal as long as they are not blocked). At a later stage I also added Statsbomb's freeze frame information into the dashboard which allows you to see the location of the goalkeeper and set-ups of the defending and attacking teams (notably were the wall is located). 
+
+![](/portfolio/2020-04-20-lionel-messi-free-kick-dashboard_files/messi2.gif)
+
+Since the freeze frame information only really makes sense if a single free kick is highlighted I added a short text summary in case multiple events are selected. It highlights how many off the selected free kicks resulted in goals, were saved, blocked or off target. As Statsbomb provides xG data we can check if Messi outperformed the model for this selection. 
+
+![](/portfolio/2020-04-20-lionel-messi-free-kick-dashboard_files/messi3.gif)
+
+Crosstalk not only allows you to link charts with each other but also charts and tables. The table in the bottom left automatically filters when events are selected but also works the other way around: we can for example also filter the table for all free kicks against Iker Casillas and then highlight the respective locations and impacts in the charts above.
+
+![](/portfolio/2020-04-20-lionel-messi-free-kick-dashboard_files/messi4.gif)
+
+<style>
+div.blue { background-color:#e6f0ff; padding: 20px;}
+</style>
+<div class = "blue">
+
+The underlying code is available on [Github](https://github.com/larsmaurath/free-kick-dashboard){target="_blank"}
+
+It should work out of the box without too many adjustments with other free data from Statsbomb.
+
+</div>

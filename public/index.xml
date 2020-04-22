@@ -6,10 +6,21 @@
     <description>Recent content on Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 15 Sep 2018 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 20 Apr 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Lionel Messi - Free Kick Dashboard</title>
+      <link>/portfolio/lionel-messi-free-kick-dashboard/</link>
+      <pubDate>Mon, 20 Apr 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/lionel-messi-free-kick-dashboard/</guid>
+      <description>I finally had some time to play around with the free Statsbomb data. I previously wanted to look into using the crosstalk package to link interactive charts and this data set which includes all of Messi’s La Liga free kicks gave me a good excuse.
+ Launch Dashboard  
+The initial idea was to link the location of free kicks to their goal impact (or their impact outside of the goal as long as they are not blocked).</description>
+    </item>
     
     <item>
       <title>Quantifying Injury Rates</title>

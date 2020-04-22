@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>shiny on Significant Game</title>
+    <link>/tags/shiny/</link>
+    <description>Recent content in shiny on Significant Game</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 20 Apr 2020 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/shiny/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Lionel Messi - Free Kick Dashboard</title>
+      <link>/portfolio/lionel-messi-free-kick-dashboard/</link>
+      <pubDate>Mon, 20 Apr 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/lionel-messi-free-kick-dashboard/</guid>
+      <description>I finally had some time to play around with the free Statsbomb data. I previously wanted to look into using the crosstalk package to link interactive charts and this data set which includes all of Messi’s La Liga free kicks gave me a good excuse.
+ Launch Dashboard  
+The initial idea was to link the location of free kicks to their goal impact (or their impact outside of the goal as long as they are not blocked).</description>
+    </item>
+    
+  </channel>
+</rss>
