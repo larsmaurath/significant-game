@@ -5,6 +5,6 @@ title: About me
 
 ### Other Projects
 
-#### [Keine Mathematik](https://www.keinemathematik.de/){target="_blank"}
+#### [Keine Mathematik](https://www.keinemathematik.de/)
 
 A blog aiming to introduce data-driven football analytics to the German speaking football audience.
