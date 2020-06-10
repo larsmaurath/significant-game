@@ -6,10 +6,28 @@
     <description>Recent content in Tags on Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 25 Apr 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 09 Jun 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>ggplot</title>
+      <link>/tags/ggplot/</link>
+      <pubDate>Tue, 09 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/ggplot/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>injuries</title>
+      <link>/tags/injuries/</link>
+      <pubDate>Tue, 09 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/injuries/</guid>
+      <description></description>
+    </item>
     
     <item>
       <title>Liverpool</title>
@@ -53,15 +71,6 @@
       <pubDate>Mon, 20 Apr 2020 00:00:00 +0000</pubDate>
       
       <guid>/tags/shotmap/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>injuries</title>
-      <link>/tags/injuries/</link>
-      <pubDate>Sat, 15 Sep 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/injuries/</guid>
       <description></description>
     </item>
     

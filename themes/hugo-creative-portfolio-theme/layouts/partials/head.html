@@ -13,6 +13,8 @@
 <!-- Theme stylesheet, if possible do not edit this stylesheet -->
 {{ with .Site.Params.style }}
   <link href="{{ printf "css/style.%s.css" . | absURL }}" rel="stylesheet" id="theme-stylesheet">
+  <script src="{{ "js/highlight.pack.js" | absURL }}"></script> <!-- This was added to include syntax highlighting -->
+  <script>hljs.initHighlightingOnLoad();</script> <!-- This was added to include syntax highlighting -->
 {{ else }}
   <link href="{{ "css/style.default.css" | absURL }}" rel="stylesheet" id="theme-stylesheet">
 {{ end }}
