@@ -109,27 +109,31 @@ if (!doNotTrack) {
       <div class="content-column-content">
          <h1>Injury Polar Plots</h1>
          
+<script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
 
 
-<p>Injury data has been a bit of a guilty pleasure for me <a href="https://www.thesignificantgame.com/portfolio/quantifying-injury-rates/" target="_blank">recently</a>. Browsing through some of the data from Transfermarkt I looked into different ways of visualizing it. Specifically I was focussed on highlighting injury lengths and their distribution over a player’s career.</p>
+<p>Injury data has been a bit of a guilty pleasure for me <a href="https://www.thesignificantgame.com/portfolio/quantifying-injury-rates/" target="_blank">recently</a>. When browsing through some of the data from Transfermarkt I looked into different ways of visualizing it. Specifically I was focused on highlighting injury lengths and their distribution over a player’s career.</p>
 <div class="figure">
 <img src="/portfolio/2020-06-09-injury-polar-plots_files/injury_history.png" alt="Screenshot from transfermarkt.com" style="width:50.0%" />
 <p class="caption"><em>Screenshot from transfermarkt.com</em></p>
 </div>
-<p>This resulted in the below viz for Marco Reus which is inspired by how I view the (European) football calendar: running counter-clockwise and with the summer break at 6 o’clock. Each ring in the polar plot corresponds to one season moving from the first season on the inside to the most recent season as the outer ring. On the right half there is some space for a player portrait, some commentary and an overview on missed games per season.</p>
+<p>This resulted in the below viz for Marco Reus which is inspired by how I view the (European) football calendar: running counter-clockwise and with the summer break at 6 o’clock.</p>
+<p>Each ring in the polar plot corresponds to one season moving from the first season on the inside to the most recent season as the outer ring. On the right half there is some space for a player portrait, some commentary and an overview on missed games per season.</p>
 <blockquote class="twitter-tweet"><p lang="en" dir="ltr">A second version of this viz in true black &amp; yellow with annotations and background on the numbers of games missed by season. Still unsure about the color for healthy periods... <a href="https://twitter.com/hashtag/RStats?src=hash&amp;ref_src=twsrc%5Etfw">#RStats</a> <a href="https://twitter.com/hashtag/BVB?src=hash&amp;ref_src=twsrc%5Etfw">#BVB</a> <a href="https://t.co/0dnSEzUZUZ">pic.twitter.com/0dnSEzUZUZ</a></p>&mdash; Lars M (@thesignigame) <a href="https://twitter.com/thesignigame/status/1264554303546679296?ref_src=twsrc%5Etfw">May 24, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
+<p><br/><br/></p>
 <div id="form-over-function" class="section level3">
 <h3>Form Over Function</h3>
 <p>Looking at the polar chart it is clear that it looks appealing (at least in my view), but it is hard to read. I do not think that it is hard to understand what is shown on a high level, but following individual seasons by ring or comparing injury durations across seasons is very hard. In other words it commits the cardinal sin of prioritizing <em>form over function</em>.</p>
-<p>Even the CRAN documentation for the <em>coord_polar</em> function explicitly warns of this and they are subtle about it:</p>
+<p>Even the CRAN documentation for the <em>coord_polar</em> function explicitly warns of this and they are not subtle about it:</p>
 <style>
 div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
 </style>
 <div class="blue">
 <p>NOTE: Use these plots with caution - polar coordinates has major perceptual problems. The main point of these examples is to demonstrate how these common plots can be described in the grammar. Use with EXTREME caution (from documentation of <em>coord_polar {ggplot2}</em>).</p>
 </div>
+<p><br/><br/></p>
 </div>
 <div id="bar-chart-representation" class="section level3">
 <h3>Bar Chart Representation</h3>
@@ -137,28 +141,232 @@ div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
 <blockquote class="twitter-tweet"><p lang="en" dir="ltr">And the more readable version <a href="https://t.co/IN2z3d1MQf">pic.twitter.com/IN2z3d1MQf</a></p>&mdash; Lars M (@thesignigame) <a href="https://twitter.com/thesignigame/status/1264618842640310273?ref_src=twsrc%5Etfw">May 24, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<pre class="r"><code>library(tidyverse)
-library(lubridate)
-library(cowplot)
-library(glue)
-library(ggtext)
-library(gridExtra)
-library(patchwork)</code></pre>
-<pre class="r"><code>data_plot$category &lt;- factor(data_plot$category, levels = rev(data_plot$category))
+<p><br/><br/></p>
+</div>
+<div id="how-to-construct-these-plots" class="section level3">
+<h3>How To Construct These Plots</h3>
+<p>Above visualizations are entirely produced in R without any manual steps. I will outline below how to replicate them with the example of Cristiano Ronaldo and we’ll start with loading the necessary libraries.</p>
+<pre class="r"><code>library(tidyverse) # ggplot and table manipulations
+library(lubridate) # handling of date logic
+library(cowplot) # plotting the player portrait
+library(glue) # neccessary to style the title
+library(ggtext) # neccessary to style the title
+library(patchwork) # allows us to combine plots
+library(kableExtra) # nice html table formatting</code></pre>
+<p>At the very top of this post you already see the kind of data that Transfermarkt provides for Cristiano Ronaldo. The next step is to bring them into a format that allows us keep healthy and injured periods separated.</p>
+<p>We achieve this by adding a <em>dummy</em> column with unique names for each healthy or injured period. If we simply all call them <em>healthy</em> or <em>injured</em> ggplot will group them all together and we cannot keep the original order of dates.</p>
+<p>The <em>day_diff</em> column measures the duration of each period and counts from August 1st for the first period of each season.</p>
+<p>The dataframe we are feeding into ggplot now looks like the below. The code to produce this systematically is quite involved so I won’t spell it out here. Of course this can also produced manually.</p>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+injury
+</th>
+<th style="text-align:left;">
+season
+</th>
+<th style="text-align:left;">
+from
+</th>
+<th style="text-align:left;">
+to
+</th>
+<th style="text-align:right;">
+day_diff
+</th>
+<th style="text-align:left;">
+dummy
+</th>
+<th style="text-align:left;">
+color
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Healthy
+</td>
+<td style="text-align:left;">
+2002/2003
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+334
+</td>
+<td style="text-align:left;">
+Healthy_2002/2003
+</td>
+<td style="text-align:left;">
+grey80
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Summer_Break
+</td>
+<td style="text-align:left;">
+2002/2003
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+31
+</td>
+<td style="text-align:left;">
+Summer_Break_2002/2003
+</td>
+<td style="text-align:left;">
+grey10
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Healthy
+</td>
+<td style="text-align:left;">
+2003/2004
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+334
+</td>
+<td style="text-align:left;">
+Healthy_2003/2004
+</td>
+<td style="text-align:left;">
+grey80
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Summer_Break
+</td>
+<td style="text-align:left;">
+2003/2004
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+31
+</td>
+<td style="text-align:left;">
+Summer_Break_2003/2004
+</td>
+<td style="text-align:left;">
+grey10
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Healthy
+</td>
+<td style="text-align:left;">
+2004/2005
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+334
+</td>
+<td style="text-align:left;">
+Healthy_2004/2005
+</td>
+<td style="text-align:left;">
+grey80
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Summer_Break
+</td>
+<td style="text-align:left;">
+2004/2005
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+31
+</td>
+<td style="text-align:left;">
+Summer_Break_2004/2005
+</td>
+<td style="text-align:left;">
+grey10
+</td>
+</tr>
+</tbody>
+</table>
+<p>In the following chunk we are now plotting our polar plot. The plot is initially based on a simple <em>geom_bar</em> function but is then transformed into a polar plot through <em>coord_polar</em> at the very end.</p>
+<p>A few comments on the <em>coord_polar</em> parameters: <em>start</em> is quoted in radians and specifies where in the circle your chart should start. The choice of <em>-1</em> for direction ensures that the charts plots counter-clockwise.</p>
+<p>The code below also contains a little hack that allows us to insert some space at the very center of the circle. In <em>scale_x_discrete</em> we concatenate some dummy string variables to our actual <em>season</em> vector. We won’t see any data plotted there but can so control the minimum radius of our first season.</p>
+<pre class="r"><code># Define order of data being plotted and extract a vector of seasons
+
+data_plot$dummy &lt;- factor(data_plot$dummy, levels = rev(data_plot$dummy))
 seasons &lt;- data_plot %&gt;% distinct(season) %&gt;% pull(season)
 
-plot &lt;- ggplot(data_plot, aes(x = season, y = day_diff, fill = category)) +
+# Most of the heavy lifting happens in the five lines below
+
+plot &lt;- ggplot(data_plot, aes(x = season, y = day_diff, fill = dummy)) +
   geom_bar(width = 0.5, stat = &quot;identity&quot;) +
-  scale_x_discrete(limits = c(&quot;dummy&quot;, &quot;dummy&quot;, &quot;dummy&quot;, &quot;dummy&quot;, &quot;dummy&quot;, seasons, &quot;annotation&quot;)) +
-  scale_fill_manual(values = tibble::deframe(data_plot %&gt;% select(category, color))) + 
-  coord_polar(theta = &quot;y&quot;, start = 6.5/6*pi, direction = -1, clip = &quot;off&quot;) +
-  annotate(&quot;text&quot;, x = &quot;annotation&quot;, y = 331, colour = text_col, size = 2, label = &quot;June|&quot;, angle = 340, fontface = 2) +
-  annotate(&quot;text&quot;, x = &quot;annotation&quot;, y = 5, colour = text_col, size = 2, label = &quot;|August&quot;, angle = 20, fontface = 2) +
+  scale_x_discrete(limits = c(&quot;dummy&quot;, &quot;dummy&quot;, &quot;dummy&quot;, &quot;dummy&quot;, &quot;dummy&quot;, 
+                              seasons, 
+                              &quot;annotation&quot;)) +
+  scale_fill_manual(values = tibble::deframe(data_plot %&gt;% select(dummy, color))) + 
+  coord_polar(theta = &quot;y&quot;, start = 6.5/6*pi, direction = -1)
+
+# Followed by some annotations and cleaning up of the theme
+
+plot &lt;- plot +
+  annotate(&quot;text&quot;, 
+           x = &quot;annotation&quot;, 
+           y = 331, 
+           colour = text_col, 
+           size = 2, 
+           label = &quot;June|&quot;, 
+           angle = 340, 
+           fontface = 2) +
+  annotate(&quot;text&quot;, 
+           x = &quot;annotation&quot;, 
+           y = 5, 
+           colour = text_col, 
+           size = 2, 
+           label = &quot;|August&quot;, 
+           angle = 20, 
+           fontface = 2) +
   theme_void() +
-  labs(title = glue::glue(&quot;{player_name} - &lt;b style = &#39;color:{highlight_col}&#39;&gt;Injury&lt;/b&gt; History&quot;)) +
+  labs(title = 
+         glue::glue(&quot;{player_name} - &lt;b style = &#39;color:{highlight_col}&#39;&gt;Injury&lt;/b&gt; History&quot;)) +
   theme(panel.background = element_rect(fill = background_col, color = background_col)) +
   theme(plot.background = element_rect(fill = background_col, color = background_col)) +
-  theme(plot.title = element_text(size = 16, color = text_col)) +
+  theme(plot.title = element_text(size = 14, color = text_col)) +
   theme(legend.position = &quot;none&quot;, plot.title = element_markdown(hjust = 0.5)) +
   theme(axis.title.x = element_blank(), 
         axis.title.y = element_blank(), 
@@ -167,31 +375,23 @@ plot &lt;- ggplot(data_plot, aes(x = season, y = day_diff, fill = category)) +
         axis.ticks.x = element_blank(), 
         axis.ticks.y = element_blank())
 
+# Finally we are adding the label for each season
+
 for(season in seasons){
   plot &lt;- plot +
-    annotate(&quot;text&quot;, x = season, y = 350, colour = text_col, size = 2, label = paste0(substr(season, 3, 4), &quot;/&quot;, substr(season, 8, 9)), fontface = 2)
-}</code></pre>
-<pre class="r"><code>missed_table$season &lt;- factor(missed_table$season, levels = rev(missed_table$season))
+    annotate(&quot;text&quot;, 
+             x = season, 
+             y = 350, 
+             colour = text_col, 
+             size = 1.5, 
+             label = paste0(substr(season, 3, 4), &quot;/&quot;, substr(season, 8, 9)), 
+             fontface = 2)
+}
 
-missed_plot &lt;- ggplot(missed_table, aes(x = season, y = missed_sum)) +
-  geom_col(fill = highlight_col) + 
-  ylim(0, 80) +
-  geom_text(aes(label = missed_sum), hjust = -0.8, color = text_col, size = 2) +
-  coord_flip() +
-  labs(title = &quot;Games Missed By Season&quot;) +
-  theme_minimal() +
-  theme(panel.background = element_rect(fill = background_col, color = background_col)) +
-  theme(plot.background = element_rect(fill = background_col, color = background_col)) +
-  theme(plot.title = element_text(size = 10, color = text_col)) +
-  theme(axis.title.x = element_blank(), 
-        axis.title.y = element_blank(), 
-        axis.text.x = element_blank(), 
-        axis.text.y = element_text(size = 6, color = text_col), 
-        axis.ticks.x = element_blank(), 
-        axis.ticks.y = element_blank()) +
-  theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank()) +
-  annotate(&quot;text&quot;, x = 1, y = 30, colour = text_col, size = 1.5, hjust = 0, label = &quot;@thesignigame, Data: Transfermarkt.com&quot;)</code></pre>
+plot</code></pre>
+<p><img src="/portfolio/2020-06-09-injury-polar-plots_files/figure-html/Plot%20Chart-1.png" width="672" /></p>
+<p>Once we have our polar plot we can combine it some more background information: a player portrait, some commentary and another ggplot chart. To achieve this we make use of the <a href="https://github.com/thomasp85/patchwork" target="_blank">patchwork</a>-package. With the help of this elegant package combining these four elements is literally a one-liner:</p>
+<p><em>plot + (img_plot / txt_plot / missed_plot)</em>.</p>
 <pre class="r"><code>img_plot &lt;- ggplot() +
   theme_void() +
   theme(panel.background = element_rect(fill = background_col, color = background_col)) +
@@ -206,21 +406,66 @@ txt_plot &lt;- ggplot() +
   theme(plot.background = element_rect(fill = background_col, color = background_col)) +
   xlim(0, 1) +
   ylim(0, 1) +
-  annotate(&quot;text&quot;, x = 0, y = 1.0, colour = text_col, size = 2.5, hjust = 0, label = &quot;-----------------------------------------------------------------&quot;) + 
-  annotate(&quot;text&quot;, x = 0, y = 0.8, colour = text_col, size = 2.5, hjust = 0, label = &quot;- Tore his ACL in Dec12 and again during recovery&quot;) +
-  annotate(&quot;text&quot;, x = 0, y = 0.5, colour = text_col, size = 2.5, hjust = 0, label = &quot;- Shortly after his comeback in Aug14 tore a tendon and missed \n the rest of the season with follow-up injuries&quot;) +
-  annotate(&quot;text&quot;, x = 0, y = 0.2, colour = text_col, size = 2.5, hjust = 0, label = &quot;- Thankfully more stable since he left Bayern&quot;) +
-  annotate(&quot;text&quot;, x = 0, y = 0.0, colour = text_col, size = 2.5, hjust = 0, label = &quot;-----------------------------------------------------------------&quot;)
+  annotate(&quot;text&quot;, 
+           x = 0, 
+           y = 1.0, 
+           colour = text_col, 
+           size = 2.5, 
+           hjust = 0, 
+           label = &quot;-----------------------------------------------------------------&quot;) + 
+  annotate(&quot;text&quot;, 
+           x = 0, 
+           y = 0.8, 
+           colour = text_col, 
+           size = 2.5, 
+           hjust = 0, 
+           label = &quot;- Remarkably resilient to injuries over his long career&quot;) +
+  annotate(&quot;text&quot;, 
+           x = 0, 
+           y = 0.5, 
+           colour = text_col, 
+           size = 2.5, 
+           hjust = 0, 
+           label = &quot;- Longest injury break during the season 2008/09 \n with a fractured kneecap&quot;) +
+  annotate(&quot;text&quot;, 
+           x = 0, 
+           y = 0.2, 
+           colour = text_col, 
+           size = 2.5, 
+           hjust = 0, 
+           label = &quot;- Only missed more than five games in four of 18 seasons&quot;) +
+  annotate(&quot;text&quot;, 
+           x = 0, 
+           y = 0.0, 
+           colour = text_col, 
+           size = 2.5, 
+           hjust = 0, 
+           label = &quot;-----------------------------------------------------------------&quot;)
     
 plot + (img_plot / txt_plot / missed_plot)</code></pre>
 <p><img src="/portfolio/2020-06-09-injury-polar-plots_files/figure-html/Combine%20Plots-1.png" width="672" /></p>
-<pre class="r"><code>plot_bar &lt;- ggplot(data_plot, aes(x = season, y = day_diff, fill = category)) +
+<p>As mentioned above already we can also show the same data in a more readable, but visually less appealing form. Essentially this is the state of the plot before it is bent into a circle shape.</p>
+<pre class="r"><code>plot_bar &lt;- ggplot(data_plot, aes(x = season, y = day_diff, fill = dummy)) +
   geom_col(width = 0.7) +
   scale_x_discrete(limits = seasons) +
-  scale_fill_manual(values = tibble::deframe(data_plot %&gt;% select(category, color))) + 
-  coord_flip() +
-  annotate(&quot;text&quot;, x = &quot;annotation&quot;, y = 331, colour = text_col, size = 2, label = &quot;June|&quot;, fontface = 2) +
-  annotate(&quot;text&quot;, x = &quot;annotation&quot;, y = 5, colour = text_col, size = 2, label = &quot;|August&quot;, fontface = 2) +
+  scale_fill_manual(values = tibble::deframe(data_plot %&gt;% select(dummy, color))) + 
+  coord_flip()
+
+plot_bar &lt;- plot_bar +
+  annotate(&quot;text&quot;, 
+           x = &quot;annotation&quot;, 
+           y = 331, 
+           colour = text_col, 
+           size = 2, 
+           label = &quot;June|&quot;, 
+           fontface = 2) +
+  annotate(&quot;text&quot;, 
+           x = &quot;annotation&quot;, 
+           y = 5, 
+           colour = text_col, 
+           size = 2, 
+           label = &quot;|August&quot;, 
+           fontface = 2) +
   theme_void() +
   labs(title = glue::glue(&quot;{player_name} - &lt;b style = &#39;color:{highlight_col}&#39;&gt;Injury&lt;/b&gt; History&quot;)) +
   theme(panel.background = element_rect(fill = background_col, color = background_col)) +
@@ -235,9 +480,6 @@ plot + (img_plot / txt_plot / missed_plot)</code></pre>
         axis.ticks.y = element_blank())
 
 plot_bar</code></pre>
-<pre><code>## Warning: Removed 1 rows containing missing values (geom_text).
-
-## Warning: Removed 1 rows containing missing values (geom_text).</code></pre>
 <p><img src="/portfolio/2020-06-09-injury-polar-plots_files/figure-html/Plot%20Bar-1.png" width="672" /></p>
 </div>
 
