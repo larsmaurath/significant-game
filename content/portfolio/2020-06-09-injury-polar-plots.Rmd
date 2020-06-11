@@ -10,6 +10,11 @@ tags:
 image: 'img/portfolio/injury_polar.png'
 showonlyimage: no
 ---
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="Injury Polar Plots">
+<meta name="twitter:description" content="Injury data has been a bit of a guilty pleasure for me recently. When browsing through some of the data from Transfermarkt I looked into different ways of visualizing it. Specifically I was focused on highlighting injury lengths and their distribution over a player’s career.">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/ronaldo_injury.png">
 
 Injury data has been a bit of a guilty pleasure for me [recently](https://www.thesignificantgame.com/portfolio/quantifying-injury-rates/){target="_blank"}. When browsing through some of the data from Transfermarkt I looked into different ways of visualizing it. Specifically I was focused on highlighting injury lengths and their distribution over a player's career.
