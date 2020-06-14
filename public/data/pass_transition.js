@@ -203,5 +203,3 @@ svg.selectAll(".zone")
         .attr('fill-opacity', '0.6')
         .style('fill', d => d3.interpolateGreens(d.ratio_origin * 20));
     });     
-
-

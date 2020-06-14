@@ -13,6 +13,13 @@ image: 'img/portfolio/d3_workflow.png'
 showonlyimage: no
 ---
 
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="Combining D3 and R for a Messi Pass Transition Heatmap">
+<meta name="twitter:description" content="In this post I want to show off a nice feature of R that let’s you combine d3 and R workflows flawlessly to generate powerful visualizations. In this crossover of languages, R will take the role of data loading and manipulation while d3 focuses on producing the visualization. Below shows step-by-step how to generate the following pass transition heatmap based on free StatsBomb event data.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/d3_workflow.png">
+
 ```{r Load Libraries Initial, message=FALSE, warning=FALSE, echo=FALSE}
 library(tidyverse) # Dataframe manipulation
 library(StatsBombR) # To load Statsbomb data
@@ -54,14 +61,13 @@ passes_clean <- StatsBombData %>%
 # Determine passing origin and destination zones
 
 pass_areas <- passes_clean %>%
-  mutate(location.y = pitch_height - location.y ) %>% # Flip y-coordinates
-  mutate(pass.end_location.y = pitch_height - pass.end_location.y) %>% # Flip y-coordinates
   mutate(area_origin_x = ceiling(location.x * num_zones_width / pitch_width)) %>%
   mutate(area_origin_y = ceiling(location.y * num_zones_height / pitch_height)) %>%
   mutate(area_origin = (area_origin_x - 1) * num_zones_height + area_origin_y) %>%
   mutate(area_end_x = ceiling(pass.end_location.x * num_zones_width / pitch_width)) %>%
   mutate(area_end_y = ceiling(pass.end_location.y * num_zones_height / pitch_height)) %>%
-  mutate(area_end = (area_end_x - 1) * num_zones_height + area_end_y)
+  mutate(area_end = (area_end_x - 1) * num_zones_height + area_end_y) %>%
+  filter(area_origin <= num_zones_tot & area_end <= num_zones_tot)
 
 # Tally up in which zones the passes originate
 
@@ -214,14 +220,14 @@ passes_clean <- StatsBombData %>%
   select(id, type.name, pass.type.name, pass.outcome.name, 
          player.name, location.x, location.y, 
          pass.end_location.x, pass.end_location.y) %>% # extract relevant columns
-  filter(type.name == "Pass" & player.name == "Lionel Andrés Messi Cuccittini") %>% # filter for Messi passes
-  filter(is.na(pass.type.name) & is.na(pass.outcome.name)) # filter for successful open play passes 
+  # filter for Messi passes
+  filter(type.name == "Pass" & player.name == "Lionel Andrés Messi Cuccittini") %>%
+  # filter for successful open play passes 
+  filter(is.na(pass.type.name) & is.na(pass.outcome.name))
 
 # Determine passing origin and destination zones
 
 pass_areas <- passes_clean %>%
-  mutate(location.y = pitch_height - location.y ) %>% # Flip y-coordinates
-  mutate(pass.end_location.y = pitch_height - pass.end_location.y) %>% # Flip y-coordinates
   mutate(area_origin_x = ceiling(location.x * num_zones_width / pitch_width)) %>%
   mutate(area_origin_y = ceiling(location.y * num_zones_height / pitch_height)) %>%
   mutate(area_origin = (area_origin_x - 1) * num_zones_height + area_origin_y) %>%
@@ -266,7 +272,9 @@ data <- summary_origin %>%
   left_join(summary_end, by = c("area_origin")) %>%
   mutate(ratio = n_end / n) %>%
   select(area_origin, area_end, ratio) %>%
-  pivot_wider(id_cols = c("area_origin"), names_from = "area_end", values_from = "ratio") %>%
+  pivot_wider(id_cols = c("area_origin"), 
+              names_from = "area_end", 
+              values_from = "ratio") %>%
   replace(is.na(.), 0)
 
 # Add plotting information for d3 (rectangle locations, widths and heights)
@@ -627,8 +635,6 @@ passes_clean <- StatsBombData %>%
 # Determine passing origin and destination zones
 
 pass_areas <- passes_clean %>%
-  mutate(location.y = pitch_height - location.y ) %>% # Flip y-coordinates
-  mutate(carry.end_location.y = pitch_height - carry.end_location.y) %>% # Flip y-coordinates
   mutate(area_origin_x = ceiling(location.x * num_zones_width / pitch_width)) %>%
   mutate(area_origin_y = ceiling(location.y * num_zones_height / pitch_height)) %>%
   mutate(area_origin = (area_origin_x - 1) * num_zones_height + area_origin_y) %>%
