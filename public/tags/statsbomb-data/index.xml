@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Statsbomb Data on Significant Game</title>
+    <link>/tags/statsbomb-data/</link>
+    <description>Recent content in Statsbomb Data on Significant Game</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 11 Jun 2020 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/statsbomb-data/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Combining D3 and R for a Messi Pass Transition Heatmap</title>
+      <link>/portfolio/incorporate-d3-into-a-r-workflow/</link>
+      <pubDate>Thu, 11 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/incorporate-d3-into-a-r-workflow/</guid>
+      <description>In this post I want to show off a nice feature of R that let’s you combine d3 and R workflows flawlessly to generate powerful visualizations. In this crossover of languages, R will take the role of data loading and manipulation while d3 focuses on producing the visualization. Below shows step-by-step how to generate the following pass transition heatmap based on free StatsBomb event data.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,721 @@
+---
+title: Combining D3 and R for a Messi Pass Transition Heatmap
+author: Lars Maurath
+date: '2020-06-11'
+slug: incorporate-d3-into-a-r-workflow
+categories: []
+tags:
+  - R
+  - D3
+  - Statsbomb Data
+  - Messi
+image: 'img/portfolio/d3_workflow.png'
+showonlyimage: no
+---
+
+```{r Load Libraries Initial, message=FALSE, warning=FALSE, echo=FALSE}
+library(tidyverse) # Dataframe manipulation
+library(StatsBombR) # To load Statsbomb data
+library(r2d3) # Evaluate D3 directly from R
+```
+
+```{r Get StatsBomb Data Initial, message=FALSE, warning=FALSE, echo=FALSE, results = 'hide', cache = TRUE}
+competition <- 11
+seasons <- c("2018/2019", "2017/2018", "2016/2017", "2015/2016", "2014/2015")
+
+Comp <- FreeCompetitions() %>% 
+  filter(competition_id == competition & (season_name %in% seasons))
+
+Matches <- FreeMatches(Comp)
+StatsBombData <- StatsBombFreeEvents(MatchesDF = Matches, Parallel = T)
+StatsBombData <- allclean(StatsBombData)
+```
+
+```{r Prepare Data Pass Initial, echo=FALSE}
+# Initialize parameters
+
+num_zones_width <- 12 # Number of zones horizontally
+num_zones_height <- 8 # Number of zones vertically
+num_zones_tot <- num_zones_width*num_zones_height # Total number of zones
+
+pitch_width <- 120 # As per Statsbomb definition
+pitch_height <- 80 # As per Statsbomb definition
+
+d3_pitch_width <- 840 # Pitch width for our d3 plot
+d3_pitch_height <- 544 # Pitch height for our d3 plot
+
+passes_clean <- StatsBombData %>%
+  select(id, type.name, pass.type.name, pass.outcome.name, 
+         player.name, location.x, location.y, 
+         pass.end_location.x, pass.end_location.y) %>% # extract relevant columns
+  filter(type.name == "Pass" & player.name == "Lionel Andrés Messi Cuccittini") %>% # filter for Messi passes
+  filter(is.na(pass.type.name) & is.na(pass.outcome.name)) # filter for successful open play passes 
+
+# Determine passing origin and destination zones
+
+pass_areas <- passes_clean %>%
+  mutate(location.y = pitch_height - location.y ) %>% # Flip y-coordinates
+  mutate(pass.end_location.y = pitch_height - pass.end_location.y) %>% # Flip y-coordinates
+  mutate(area_origin_x = ceiling(location.x * num_zones_width / pitch_width)) %>%
+  mutate(area_origin_y = ceiling(location.y * num_zones_height / pitch_height)) %>%
+  mutate(area_origin = (area_origin_x - 1) * num_zones_height + area_origin_y) %>%
+  mutate(area_end_x = ceiling(pass.end_location.x * num_zones_width / pitch_width)) %>%
+  mutate(area_end_y = ceiling(pass.end_location.y * num_zones_height / pitch_height)) %>%
+  mutate(area_end = (area_end_x - 1) * num_zones_height + area_end_y)
+
+# Tally up in which zones the passes originate
+
+summary_origin <- pass_areas %>%
+  group_by(area_origin) %>%
+  summarize(n = n(), ratio_origin = n()/nrow(pass_areas))
+
+# Add any zones for which we have no passing data. We of course intitialize them with 0.
+
+missing_rows <- setdiff(seq(1, num_zones_tot), summary_origin$area_origin)
+
+for(row in missing_rows){
+  summary_origin <- summary_origin %>%
+    add_row(area_origin = row, n = 0, ratio_origin = 0.0)
+}
+
+# Tally up in which zones the passes end
+
+summary_end <- pass_areas %>%  
+  group_by(area_origin, area_end) %>%
+  summarize(n_end = n()) %>%
+  ungroup()
+
+# Add any zones for which we have no passing data. We of course intitialize them with 0.
+
+missing_cols <- setdiff(seq(1, 96), summary_end$area_end)
+
+for(col in missing_cols){
+  summary_end <- summary_end %>%
+    add_row(area_origin = 1, area_end = col, n_end = 0)
+}
+
+# Combine passing origin and destination information and format as wide dataframe
+
+data <- summary_origin %>%
+  left_join(summary_end, by = c("area_origin")) %>%
+  mutate(ratio = n_end / n) %>%
+  select(area_origin, area_end, ratio) %>%
+  pivot_wider(id_cols = c("area_origin"), names_from = "area_end", values_from = "ratio") %>%
+  replace(is.na(.), 0)
+
+# Add plotting information for d3 (rectangle locations, widths and heights)
+
+data <- summary_origin %>%
+  left_join(data, by = c("area_origin")) %>%
+  select(-n) %>%
+  mutate(width = d3_pitch_width / num_zones_width, 
+         height = d3_pitch_height / num_zones_height, 
+         y1 = ((area_origin - 1) %% num_zones_height) * height, 
+         x1 = floor((area_origin - 1) / num_zones_height) * width) %>%
+  arrange(area_origin)
+```
+
+<br>
+
+In this post I want to show off a nice feature of R that let's you combine d3 and R workflows flawlessly to generate powerful visualizations. In this crossover of languages, R will take the role of data loading and manipulation while d3 focuses on producing the visualization. Below shows step-by-step how to generate the following pass transition heatmap based on free [StatsBomb](https://statsbomb.com/){target="_blank"} event data.
+
+<br>
+
+```{r Call d3 from external JS file, echo=FALSE}
+r2d3(data = data, script = "../Data/pass_transition.js", height = 584, width = 880)
+```
+
+<br><br>
+
+Disclaimer beforehand: I am very new to d3 (on a scale from d0 to d3, I am probably a d0.01), so be aware that some of my style may be a little off and there are certainly more elegant ways of achieving the below. 
+
+On the R side though I would see myself as an intermediate user, so I hope some of my thoughts on the limitations of R and ggplot specifically do make sense. Which brings us to the first question: Why even bother with d3?
+
+## Why d3?
+
+For me the main reason is *interactivity*. I have spent quite some time recently trying to make my R plots more interactive (see a dashboards for Lionel Messi freekicks [here](https://www.thesignificantgame.com/portfolio/lionel-messi-free-kick-dashboard/){target="_blank"}) and the R universe has a lot of good ressources to do so: Shiny/Flexdashboards, ggplotly and the crosstalk package. However in my opinion the user experience is just not as good as with straight JS/d3. On top, the benefits of usability and everything working straight-out-of-the-box come at the cost of everything kind of looking the same. 
+
+The package [d3scatter](https://github.com/jcheng5/d3scatter){target="_blank"} gives a little glimpse into what d3's slickness may look like in an R environment but is unfortunately (as far as I know) only a toy example.
+
+See below two examples comparing the user experience of a d3-like implementation via d3scatter and an R implementation via plotly. 
+
+<iframe seamless src="../../data/d3scatter.html" width="800" height="400" frameborder="0" scrolling="no" onload="resizeIframe(this)"></iframe>
+
+<br>
+
+<iframe seamless src="../../data/plotly.html" width="800" height="600" frameborder="0" scrolling="no" onload="resizeIframe(this)"></iframe>
+
+<br>
+
+The d3scatter experience is much closer to what I am looking for and just feels much crisper. The plotly solution works but just doesn't feel right. 
+
+***
+
+## Inspiration from Karun Singh's xT Post
+
+This brings us to my inspriation for looking into d3 in the first place: Karun Singh's Expected Threat [post](https://karun.in/blog/expected-threat.html){target="_blank"}. His article was hugely popular with football analytics twitter and I think, next to the obvious reason of its amazing content, the slickness of its presentation and charting played a significant role. 
+
+Sliders, video material, formulas and highlighted notes are seemlessly integrated and the visualizations show flawless interactivity. While I am able to achieve the former entirely in R with the blogdown package (this post and this entire blog is only possible because of it), I fail to achieve the slickness of d3 in R.
+
+The main visualizations in Karun's post are the pitch heatmaps representing *Expected Threat*. In this post I will show you how produce similar charts representing passing data based on free Statsbomb event data. 
+
+Importantly I will show how to fully integrate d3 plotting into a R workflow. With *full integration* I mean that you can directly code d3 within RStudio and that data can be shared directly from R to d3 (there is no need to save down intermediate data as json files for example). 
+
+## Getting our hands dirty
+
+We start with loading necessary libraries below:
+
+```{r Load Libraries, message=FALSE, warning=FALSE, eval=FALSE}
+library(tidyverse) # Dataframe manipulation
+library(StatsBombR) # To load Statsbomb data
+library(r2d3) # Evaluate D3 directly from R
+```
+
+<br>
+
+Next we are loading raw data from the Statsbomb API through *StatsBombR*. *11* is the identifier of LaLiga and we are concentrating on the past five completed seasons.
+
+<br>
+
+```{r Get StatsBomb Data, message=FALSE, warning=FALSE, results = 'hide', eval=FALSE}
+competition <- 11
+seasons <- c("2018/2019", "2017/2018", "2016/2017", "2015/2016", "2014/2015")
+
+Comp <- FreeCompetitions() %>% 
+  filter(competition_id == competition & (season_name %in% seasons))
+
+Matches <- FreeMatches(Comp)
+StatsBombData <- StatsBombFreeEvents(MatchesDF = Matches, Parallel = T)
+StatsBombData <- allclean(StatsBombData)
+```
+
+<br>
+
+In the following chunk we are manipulating our data to bring it in the shape needed to hand it over to d3. Below looks elaborate, but what actually happens is quite easy. We are divvying up our pitch into 96 (12x8) equally sized rectangles, calculate how many passes originate in each and if they originate in one, what is their destination. 
+
+We end up with a 96x96 transition matrix plus a column that indicates which percentage of passes originate in each rectangle. We also add a few helper columns (e.g. rectangle height/width in pixels) that will tell d3 how to construct the plot.
+
+<br>
+
+```{r Prepare Data Pass, eval=FALSE}
+# Initialize parameters
+
+num_zones_width <- 12 # Number of zones horizontally
+num_zones_height <- 8 # Number of zones vertically
+num_zones_tot <- num_zones_width*num_zones_height # Total number of zones
+
+pitch_width <- 120 # As per Statsbomb definition
+pitch_height <- 80 # As per Statsbomb definition
+
+d3_pitch_width <- 840 # Pitch width for our d3 plot
+d3_pitch_height <- 544 # Pitch height for our d3 plot
+
+passes_clean <- StatsBombData %>%
+  select(id, type.name, pass.type.name, pass.outcome.name, 
+         player.name, location.x, location.y, 
+         pass.end_location.x, pass.end_location.y) %>% # extract relevant columns
+  filter(type.name == "Pass" & player.name == "Lionel Andrés Messi Cuccittini") %>% # filter for Messi passes
+  filter(is.na(pass.type.name) & is.na(pass.outcome.name)) # filter for successful open play passes 
+
+# Determine passing origin and destination zones
+
+pass_areas <- passes_clean %>%
+  mutate(location.y = pitch_height - location.y ) %>% # Flip y-coordinates
+  mutate(pass.end_location.y = pitch_height - pass.end_location.y) %>% # Flip y-coordinates
+  mutate(area_origin_x = ceiling(location.x * num_zones_width / pitch_width)) %>%
+  mutate(area_origin_y = ceiling(location.y * num_zones_height / pitch_height)) %>%
+  mutate(area_origin = (area_origin_x - 1) * num_zones_height + area_origin_y) %>%
+  mutate(area_end_x = ceiling(pass.end_location.x * num_zones_width / pitch_width)) %>%
+  mutate(area_end_y = ceiling(pass.end_location.y * num_zones_height / pitch_height)) %>%
+  mutate(area_end = (area_end_x - 1) * num_zones_height + area_end_y)
+
+# Tally up in which zones the passes originate
+
+summary_origin <- pass_areas %>%
+  group_by(area_origin) %>%
+  summarize(n = n(), ratio_origin = n()/nrow(pass_areas))
+
+# Add any zones for which we have no passing data. We of course intitialize them with 0.
+
+missing_rows <- setdiff(seq(1, num_zones_tot), summary_origin$area_origin)
+
+for(row in missing_rows){
+  summary_origin <- summary_origin %>%
+    add_row(area_origin = row, n = 0, ratio_origin = 0.0)
+}
+
+# Tally up in which zones the passes end
+
+summary_end <- pass_areas %>%  
+  group_by(area_origin, area_end) %>%
+  summarize(n_end = n()) %>%
+  ungroup()
+
+# Add any zones for which we have no passing data. We of course intitialize them with 0.
+
+missing_cols <- setdiff(seq(1, 96), summary_end$area_end)
+
+for(col in missing_cols){
+  summary_end <- summary_end %>%
+    add_row(area_origin = 1, area_end = col, n_end = 0)
+}
+
+# Combine passing origin and destination information and format as wide dataframe
+
+data <- summary_origin %>%
+  left_join(summary_end, by = c("area_origin")) %>%
+  mutate(ratio = n_end / n) %>%
+  select(area_origin, area_end, ratio) %>%
+  pivot_wider(id_cols = c("area_origin"), names_from = "area_end", values_from = "ratio") %>%
+  replace(is.na(.), 0)
+
+# Add plotting information for d3 (rectangle locations, widths and heights)
+
+data <- summary_origin %>%
+  left_join(data, by = c("area_origin")) %>%
+  select(-n) %>%
+  mutate(width = d3_pitch_width / num_zones_width, 
+         height = d3_pitch_height / num_zones_height, 
+         y1 = ((area_origin - 1) %% num_zones_height) * height, 
+         x1 = floor((area_origin - 1) / num_zones_height) * width) %>%
+  arrange(area_origin)
+```
+
+<br>
+
+Having our data ready we can now feed it to our d3 code. Thanks to the r2d3-package we now have two choices:
+
+- Use the *r2d3* function in an R-chunk to evaluate an external js-file
+- Directly use d3 code within a d3-chunk
+
+<br>
+
+First the option via the *r2d3* function
+
+```{r Call d3 from external JS file I, eval=FALSE, include=TRUE}
+r2d3(data = data, script = "../Data/pass_transition.js", height = 584, width = 880)
+```
+
+<br>
+
+Below the second option which displays the full d3 code. I won't comment the below code step-by-step, but will only highlight a few key items.
+
+We start by creating a background on which we plot our football pitch. The code is lengthy and somewhat self explanatory so I will hide it, but feel free to view it by clicking on the below. It is borrowed from the following ObservableHQ [notebook](https://observablehq.com/@cheung927/d3-js-football-pitch/2){target="_blank"}.
+
+<details><summary><b>click to see code for creating a pitch plot</b></summary>
+<p>
+
+```{r Evaluate d3 directly from chunk - Pitch, eval=FALSE}
+lineColor = "#000";
+lineWidth = 1;
+//pitchColor = "#eee";
+pitchColor = "white";
+pitchMultiplier = 8;
+pitchWidth = 105;
+pitchHeight = 68;
+margin = ({top: 20, right: 20, bottom: 20, left: 20});
+width = pitchWidth * pitchMultiplier;
+height = pitchHeight * pitchMultiplier;
+
+const pitch = svg.append('g')
+  .attr('transform', `translate(${margin.left},${margin.right})`);
+  
+pitch.append('rect')
+    .attr('x', -margin.left)
+    .attr('y', -margin.top)
+    .attr('width', width + margin.left + margin.right)
+    .attr('height', height + margin.top + margin.bottom)
+    .style('fill', pitchColor);
+
+getPitchLines = function () {
+  const lines = [];
+  // left penalty box
+  lines.push({x1: 0, x2: 16.5, y1: pitchHeight/2 - 11 - 9.15, y2: pitchHeight/2 - 11 - 9.15});
+  lines.push({x1: 16.5, x2: 16.5, y1: 13.85, y2: pitchHeight/2 + 11 + 9.15});
+  lines.push({x1: 0, x2: 16.5, y1: pitchHeight/2 + 11 + 9.15, y2: pitchHeight/2 + 11 + 9.15});
+  // left six-yard box
+  lines.push({x1: 0, x2: 5.5, y1: pitchHeight/2 - 9.15, y2: pitchHeight/2 - 9.15});
+  lines.push({x1: 5.5, x2: 5.5, y1: pitchHeight/2 - 9.15, y2: pitchHeight/2 + 9.15});
+  lines.push({x1: 0, x2: 5.5, y1: pitchHeight/2 + 9.15, y2: pitchHeight/2 + 9.15});
+  // right penalty box
+  lines.push({x1: pitchWidth - 16.5, x2: pitchWidth, y1: pitchHeight/2 - 11 - 9.15, y2: pitchHeight/2 - 11 - 9.15});
+  lines.push({x1: pitchWidth - 16.5, x2: pitchWidth - 16.5, y1: pitchHeight/2 - 11 - 9.15, y2: pitchHeight/2 + 11 + 9.15});
+  lines.push({x1: pitchWidth - 16.5, x2: pitchWidth, y1: pitchHeight/2 + 11 + 9.15, y2: pitchHeight/2 + 11 + 9.15});
+  // right six-yard box
+  lines.push({x1: pitchWidth - 5.5, x2: pitchWidth, y1: pitchHeight/2 - 9.15, y2: pitchHeight/2 - 9.15});
+  lines.push({x1: pitchWidth - 5.5, x2: pitchWidth - 5.5, y1: pitchHeight/2 - 9.15, y2: pitchHeight/2 + 9.15});
+  lines.push({x1: pitchWidth - 5.5, x2: pitchWidth, y1: pitchHeight/2 + 9.15, y2: pitchHeight/2 + 9.15});
+  // outside borders
+  lines.push({x1: 0, x2: pitchWidth, y1: 0, y2: 0});
+  lines.push({x1: 0, x2: pitchWidth, y1: pitchHeight, y2: pitchHeight});
+  lines.push({x1: 0, x2: 0, y1: 0, y2: pitchHeight});
+  lines.push({x1: pitchWidth, x2: pitchWidth, y1: 0, y2: pitchHeight});
+  // middle line
+  lines.push({x1: pitchWidth/2, x2: pitchWidth/2, y1: 0, y2: pitchHeight});
+  // left goal
+  lines.push({x1: -1.5, x2: -1.5, y1: pitchHeight/2 - 7.32/2, y2: pitchHeight/2 + 7.32/2});
+  lines.push({x1: -1.5, x2: 0, y1: pitchHeight/2 - 7.32/2, y2: pitchHeight/2 - 7.32/2});
+  lines.push({x1: -1.5, x2: 0, y1: pitchHeight/2 + 7.32/2, y2: pitchHeight/2 + 7.32/2});
+  // right goal
+  lines.push({x1: pitchWidth + 1.5, x2: pitchWidth + 1.5, y1: pitchHeight/2 - 7.32/2, y2: pitchHeight/2 + 7.32/2});
+  lines.push({x1: pitchWidth, x2: pitchWidth + 1.5, y1: pitchHeight/2 - 7.32/2, y2: pitchHeight/2 - 7.32/2});
+  lines.push({x1: pitchWidth, x2: pitchWidth + 1.5, y1: pitchHeight/2 + 7.32/2, y2: pitchHeight/2 + 7.32/2});
+  return lines;
+};
+
+getPitchCircles2 = function () {
+  const circles = [];
+  // center circle
+  circles.push({cx: pitchWidth/2, cy: pitchHeight/2, r: 9.15, color: 'none'});
+  // // left penalty spot
+  // circles.push({cx: 11, cy: pitchHeight/2, r: 0.3, color: lineColor});
+  // // right penalty spot
+  // circles.push({cx: pitchWidth - 11, cy: pitchHeight/2, r: 0.3, color: lineColor});
+  // // kick-off circle
+  circles.push({cx: pitchWidth/2, cy: pitchHeight/2, r: 0.3, color: lineColor});
+  return circles;
+};
+
+getArcs = function () {
+  const arcs = [];
+  const cornerRadius = 1 * pitchMultiplier;
+  const penaltyRadius = 9.15 * pitchMultiplier;
+  // left top corner
+  arcs.push({arc: {innerRadius: cornerRadius, outerRadius: cornerRadius + lineWidth, startAngle: 1/2 * Math.PI, endAngle: Math.PI}, 'x': 0, 'y': 0});
+  // left bottom corner
+  arcs.push({arc: {innerRadius: cornerRadius, outerRadius: cornerRadius + lineWidth, startAngle: 1/2 * Math.PI, endAngle: 0}, 'x': 0, 'y': pitchHeight});
+  // right top corner
+  arcs.push({arc: {innerRadius: cornerRadius, outerRadius: cornerRadius + lineWidth, startAngle: 3/2 * Math.PI, endAngle: Math.PI}, 'x': pitchWidth, 'y': 0});
+  // right bottom corner
+  arcs.push({arc: {innerRadius: cornerRadius, outerRadius: cornerRadius + lineWidth, startAngle: 2 * Math.PI, endAngle: 3/2 * Math.PI}, 'x': pitchWidth, 'y': pitchHeight});
+  // left penalty arc
+  arcs.push({arc: {innerRadius: penaltyRadius, outerRadius: penaltyRadius + lineWidth, startAngle: Math.sin(6.5/9.15), endAngle: Math.PI - Math.sin(6.5/9.15)}, 'x': 11, 'y': pitchHeight/2});
+  // right penalty arc
+  arcs.push({arc: {innerRadius: penaltyRadius, outerRadius: penaltyRadius + lineWidth, startAngle: -Math.sin(6.5/9.15), endAngle: -(Math.PI - Math.sin(6.5/9.15))}, 'x': pitchWidth - 11, 'y': pitchHeight/2});
+  return arcs;
+};
+    
+const pitchLineData = getPitchLines();
+pitch.selectAll('.pitchLines')
+    .data(pitchLineData)
+  .enter().append('line')
+    .attr('x1', d => d['x1'] * pitchMultiplier)
+    .attr('x2', d => d['x2'] * pitchMultiplier)
+    .attr('y1', d => d['y1'] * pitchMultiplier)
+    .attr('y2', d => d['y2'] * pitchMultiplier)
+    .style('stroke-width', lineWidth)
+    .style('stroke', lineColor);
+    
+const pitchCircleData = getPitchCircles2();
+pitch.selectAll('.pitchCircles')
+    .data(pitchCircleData)
+  .enter().append('circle')
+    .attr('cx', d => d['cx'] * pitchMultiplier)
+    .attr('cy', d => d['cy'] * pitchMultiplier)
+    .attr('r', d => d['r'] * pitchMultiplier)
+    .style('stroke-width', lineWidth)
+    .style('stroke', lineColor)
+    .style('fill', d => d['color']);
+    
+const pitchArcData = getArcs();
+const arc = d3.arc();
+pitch.selectAll('.pitchCorners')
+    .data(pitchArcData)
+  .enter().append('path')
+    .attr('d', d => arc(d['arc']))
+    .attr('transform', d => `translate(${pitchMultiplier * d.x},${pitchMultiplier * d.y})`)
+    .style('fill', lineColor);    
+
+pitch.selectAll("g")
+    .data(data)
+    .enter()
+    .append('rect')
+    .attr("class", "zone")
+    .attr('x', d => d.x1)
+    .attr('y', d => d.y1)
+    .attr('width', d => d.width)
+    .attr('height', d => d.height)
+    .attr('fill-opacity', '0.6')
+    .attr("id", function (d) {return (d.area_origin)})
+    .style('fill', d => d3.interpolateGreens(d.ratio_origin * 20));
+
+svg.selectAll(".zone")
+  .on("mouseover", function(d, i) {
+    var select_id = d3.select(this).attr("id");
+
+    d3.select(this)
+      .style("stroke", "orange")
+      .style("stroke-width", 1);
+      
+    svg.selectAll(".zone")
+    .datum(data[(select_id-1).toString()])
+    .each(function (d, i) {
+      var select_id = d3.select(this).attr("id");
+      
+      d3.select(this)
+        .attr('fill-opacity', '0.6')
+        .style("fill", d => d3.interpolateGreens(d[(select_id).toString()] * 10));   
+      });
+    })
+    .on("mouseleave", function(d) {
+      d3.select(this)
+        .style("stroke", "none");
+      
+      svg.selectAll(".zone")
+        .data(data)
+        .attr('fill-opacity', '0.6')
+        .style('fill', d => d3.interpolateGreens(d.ratio_origin * 20));
+    });     
+    
+svg.append("svg:defs")
+  .append("svg:marker")
+  .attr("id", "triangle")
+  .attr("refX", 600)
+  .attr("refY", height + margin.bottom*3/2)
+  .attr("markerWidth", 6)
+  .attr("markerHeight", 6)
+  .attr("orient", "auto");    
+    
+svg.append("line")
+  .attr("x1", 300)
+  .attr("y1", height + margin.bottom*3/2)
+  .attr("x2", 600)
+  .attr("y2", height + margin.bottom*3/2)          
+  .attr("stroke-width", 1)
+  .attr("stroke", "black")
+  .attr("marker-end", "url(#triangle)");    
+```
+
+</p>
+</details>
+
+<br>
+
+Below we add an arrow indicating direction of play and a short title which we will later update dynamically as a function of the mouse position. 
+
+```{r Evaluate d3 directly from chunk - Title, eval=FALSE}
+svg.append('defs')
+  .append('marker')
+  .attr('id', 'arrow')
+  .attr('viewBox', [0, 0, markerBoxWidth, markerBoxHeight])
+  .attr('refX', refX)
+  .attr('refY', refY)
+  .attr('markerWidth', markerBoxWidth)
+  .attr('markerHeight', markerBoxHeight)
+  .attr('orient', 'auto-start-reverse')
+  .append('path')
+  .attr('d', d3.line()(arrowPoints))
+  .attr('stroke', 'black');
+
+svg.append('path')
+  .attr('d', d3.line()([[width/3, height + margin.bottom*3/2], [width*2/3, height + margin.bottom*3/2]]))
+  .attr('stroke', 'black')
+  .attr('marker-end', 'url(#arrow)')
+  .attr('fill', 'none');   
+
+svg.append("text")
+  .attr("class", "title")
+  .attr("x", (width / 10))             
+  .attr("y", 0 + (margin.top / 2))
+  .attr("text-anchor", "left")  
+  .style("font-size", "14px") 
+  .style("font-weight","bold")
+  .text("Messi Passing Transitions");   
+```
+
+<br>
+
+Next up we will define our rectangles. Note that the *data* object is exactly the same which we produced from our raw Statsbomb data. d3 infers the number of rectangles to generate from the number of rows in our original dataframe. 
+
+The fill color is a function of the column value *ratio_origin* and represents zones with many passes as dark green and zones with no passes as white. All these rectangles are now plotted (with some opacity) on top of our pitch.
+
+<br>
+
+```{r Evaluate d3 directly from chunk - Rect, eval=FALSE}
+pitch.selectAll("g")
+    .data(data)
+    .enter()
+    .append('rect')
+    .attr("class", "zone")
+    .attr('x', d => d.x1)
+    .attr('y', d => d.y1)
+    .attr('width', d => d.width)
+    .attr('height', d => d.height)
+    .attr('fill-opacity', '0.6')
+    .attr("id", function (d) {return (d.area_origin)})
+    .style('fill', d => d3.interpolateGreens(d.ratio_origin * 20));
+```
+
+<br>
+
+We also want to add some reactivity. Our goal is to highlight passing destinations that originate in a certain zone once we hover over it. If our mouse leaves the chart we want to revert to showing the original heatmap of pass origins. 
+
+We achieve this by using two [mouse-events](https://www.stator-afm.com/tutorial/d3-js-mouse-events/){target="_blank"}: *mouseover* and *mouseleave*. These are applied to all elements of class *zone*. While the *mouseleave*-event is relatively easy, the highlighting of the pass destinations is more involved: 
+
+We first need to check over which zone we care currently hovering (*var select_id = d3.select(this).attr("id");*), then filter our raw data for this relevant row, to then loop through all rectangles and asign a fill color based on their column value.
+
+<br>
+
+```{r Evaluate d3 directly from chunk - Reactivity, eval=FALSE}
+svg.selectAll(".zone")
+  .on("mouseover", function(d, i) {
+    var select_id = d3.select(this).attr("id");
+
+    d3.select(this)
+      .style("stroke", "orange")
+      .style("stroke-width", 1);
+      
+    svg.selectAll(".zone")
+    .datum(data[(select_id-1).toString()])
+    .each(function (d, i) {
+      var select_id = d3.select(this).attr("id");
+      
+      d3.select(this)
+        .attr('fill-opacity', '0.6')
+        .style("fill", d => d3.interpolateGreens(d[(select_id).toString()] * 10));   
+      });
+    })
+  .on("mouseleave", function(d) {
+    d3.select(this)
+      .style("stroke", "none");
+      
+    svg.selectAll(".zone")
+       .data(data)
+       .attr('fill-opacity', '0.6')
+       .style('fill', d => d3.interpolateGreens(d.ratio_origin * 20));
+    });     
+```
+
+<br>
+
+Overall this now leaves us with the below chart:
+
+<br>
+
+```{r Call d3 from external JS file II, echo=FALSE}
+r2d3(data = data, script = "../Data/pass_transition.js", height = 584, width = 880)
+```
+
+<br>
+
+### Application to carries instead of passes
+
+<br>
+
+We can also very easily apply this to carries instead of passes. We only really need to change the below code to filter for carries.
+
+<br>
+
+```{r Prepare Data Carry, include=FALSE}
+# Initialize parameters
+
+num_zones_width <- 12 # Number of zones horizontally
+num_zones_height <- 8 # Number of zones vertically
+num_zones_tot <- num_zones_width*num_zones_height # Total number of zones
+
+pitch_width <- 120 # As per Statsbomb definition
+pitch_height <- 80 # As per Statsbomb definition
+
+d3_pitch_width <- 840 # Pitch width for our d3 plot
+d3_pitch_height <- 544 # Pitch height for our d3 plot
+
+passes_clean <- StatsBombData %>%
+  select(id, type.name, player.name, location.x, location.y, 
+         carry.end_location.x, carry.end_location.y) %>% # extract relevant columns
+  filter(type.name == "Carry" & player.name == "Lionel Andrés Messi Cuccittini") # filter for Messi carries
+
+# Determine passing origin and destination zones
+
+pass_areas <- passes_clean %>%
+  mutate(location.y = pitch_height - location.y ) %>% # Flip y-coordinates
+  mutate(carry.end_location.y = pitch_height - carry.end_location.y) %>% # Flip y-coordinates
+  mutate(area_origin_x = ceiling(location.x * num_zones_width / pitch_width)) %>%
+  mutate(area_origin_y = ceiling(location.y * num_zones_height / pitch_height)) %>%
+  mutate(area_origin = (area_origin_x - 1) * num_zones_height + area_origin_y) %>%
+  mutate(area_end_x = ceiling(carry.end_location.x * num_zones_width / pitch_width)) %>%
+  mutate(area_end_y = ceiling(carry.end_location.y * num_zones_height / pitch_height)) %>%
+  mutate(area_end = (area_end_x - 1) * num_zones_height + area_end_y)
+
+# Tally up in which zones the passes originate
+
+summary_origin <- pass_areas %>%
+  group_by(area_origin) %>%
+  summarize(n = n(), ratio_origin = n()/nrow(pass_areas))
+
+# Add any zones for which we have no passing data. We of course intitialize them with 0.
+
+missing_rows <- setdiff(seq(1, num_zones_tot), summary_origin$area_origin)
+
+for(row in missing_rows){
+  summary_origin <- summary_origin %>%
+    add_row(area_origin = row, n = 0, ratio_origin = 0.0)
+}
+
+# Tally up in which zones the passes end
+
+summary_end <- pass_areas %>%  
+  group_by(area_origin, area_end) %>%
+  summarize(n_end = n()) %>%
+  ungroup()
+
+# Add any zones for which we have no passing data. We of course intitialize them with 0.
+
+missing_cols <- setdiff(seq(1, 96), summary_end$area_end)
+
+for(col in missing_cols){
+  summary_end <- summary_end %>%
+    add_row(area_origin = 1, area_end = col, n_end = 0)
+}
+
+# Combine passing origin and destination information and format as wide dataframe
+
+data_carry <- summary_origin %>%
+  left_join(summary_end, by = c("area_origin")) %>%
+  mutate(ratio = n_end / n) %>%
+  select(area_origin, area_end, ratio) %>%
+  pivot_wider(id_cols = c("area_origin"), names_from = "area_end", values_from = "ratio") %>%
+  replace(is.na(.), 0)
+
+# Add plotting information for d3 (rectangle locations, widths and heights)
+
+data_carry <- summary_origin %>%
+  left_join(data_carry, by = c("area_origin")) %>%
+  select(-n) %>%
+  mutate(width = d3_pitch_width / num_zones_width, 
+         height = d3_pitch_height / num_zones_height, 
+         y1 = ((area_origin - 1) %% num_zones_height) * height, 
+         x1 = floor((area_origin - 1) / num_zones_height) * width) %>%
+  arrange(area_origin)
+```
+
+```{r Prepare Data Carry Show, eval=FALSE}
+passes_clean <- StatsBombData %>%
+  select(id, type.name, player.name, location.x, location.y, 
+         carry.end_location.x, carry.end_location.y) %>% # extract relevant columns
+  # filter for Messi carries
+  filter(type.name == "Carry" & player.name == "Lionel Andrés Messi Cuccittini") 
+```
+
+<br>
+
+```{r Call d3 from external JS file III, echo=FALSE}
+r2d3(data = data_carry, script = "../Data/carry_transition.js", height = 584, width = 880)
+```
+
+<br>
+
+I hope this post is helpful for football analytics people who want to look into d3 (from an R background or not). To finish off I have summarized a few ressources below.
+
+### Ressources
+
+<style>
+div.blue {background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+
+- Karuns Singh's Expected Threat [post](https://karun.in/blog/expected-threat.html){target="_blank"}
+- [Documentation](https://rstudio.github.io/r2d3/){target="_blank"} for the r2d3 package
+- [Gallery](https://observablehq.com/@d3/gallery){target="_blank"} of d3 examples
+- [Code](https://observablehq.com/@cheung927/d3-js-football-pitch/2){target="_blank"} for a d3 pitch plot 
+
+</div>

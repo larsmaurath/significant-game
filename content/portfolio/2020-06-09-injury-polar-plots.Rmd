@@ -132,7 +132,7 @@ date_to_season <- function(date){
 
 path_to_img <- "https://tmssl.akamaized.net/images/portrait/header/8198-1568120625.jpg?lm=1568120652"
 player_name <- "Cristiano Ronaldo"
-data <- read_csv("~/Documents/R/injury_ronaldo.csv", col_types = "cccn")
+data <- read_csv("../Data/injury_ronaldo.csv", col_types = "cccn")
 highlight_col <- "red3"
 muted_col <- "grey80"
 background_col <- "grey10"
