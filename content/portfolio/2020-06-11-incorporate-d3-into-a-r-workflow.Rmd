@@ -19,7 +19,7 @@ library(StatsBombR) # To load Statsbomb data
 library(r2d3) # Evaluate D3 directly from R
 ```
 
-```{r Get StatsBomb Data Initial, message=FALSE, warning=FALSE, echo=FALSE, results = 'hide', cache = TRUE}
+```{r Get StatsBomb Data Initial, message=FALSE, warning=FALSE, echo=FALSE, results = 'hide'}
 competition <- 11
 seasons <- c("2018/2019", "2017/2018", "2016/2017", "2015/2016", "2014/2015")
 
