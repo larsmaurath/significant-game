@@ -50,7 +50,7 @@ if (!doNotTrack) {
           <div class="row row-offcanvas row-offcanvas-left">
               <div id="sidebar" class="col-xs-6 col-sm-4 col-md-3 sidebar-offcanvas">
   <div class="sidebar-content">
-    <h1 class="sidebar-heading"><a href="/">Significant Game</a></h1>
+    <h1 class="sidebar-heading"><a href="/">The Significant Game</a></h1>
     
       <p class="sidebar-p">Football and Data.</p>
     
@@ -101,7 +101,7 @@ if (!doNotTrack) {
 <div class="col-xs-12 col-sm-8 col-md-9 content-column white-background">
   <div class="small-navbar visible-xs">
   <button type="button" data-toggle="offcanvas" class="btn btn-ghost pull-left"> <i class="fa fa-align-left"> </i>Menu</button>
-  <h1 class="small-navbar-heading"><a href="/">Significant Game</a></h1>
+  <h1 class="small-navbar-heading"><a href="/">The Significant Game</a></h1>
 </div>
 
   <div class="row">
@@ -128,15 +128,15 @@ if (!doNotTrack) {
 <pre class="r"><code>library(tidyverse)
 library(dbplyr)
 library(DBI)</code></pre>
-<pre class="r"><code>team_id &lt;- 26
+<pre class="r"><code>team_ids &lt;- c(26, 37)
 
 con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;)
 
 matches &lt;- tbl(con, &quot;matches&quot;) %&gt;%
   #filter(season %in% c(&quot;2019/2020&quot;, &quot;2018/2019&quot;, &quot;2017/2018&quot;, &quot;2016/2017&quot;, &quot;2015/2016&quot;, &quot;2014/2015&quot;, &quot;2013/2014&quot;, &quot;2012/2013&quot;)) %&gt;%
-  filter(season %in% c(&quot;2017/2018&quot;)) %&gt;%
-  filter(league %in% c(&quot;England&quot;)) %&gt;%
-  #filter(home_team_id == team_id | away_team_id == team_id) %&gt;%
+  filter(season %in% c(&quot;2019/2020&quot;, &quot;2018/2019&quot;, &quot;2017/2018&quot;, &quot;2016/2017&quot;)) %&gt;%
+  filter(league %in% c(&quot;Champions_League&quot;)) %&gt;%
+  filter(home_team_id %in% team_ids | away_team_id %in% team_ids) %&gt;%
   select(c(&quot;match_id&quot;, &quot;season&quot;, &quot;league&quot;, &quot;date&quot;)) %&gt;%
   collect()
 
@@ -147,20 +147,42 @@ match_ids &lt;- matches$match_id
 match_summary &lt;- matches %&gt;% 
   group_by(season, league) %&gt;%
   summarise(count = n())</code></pre>
-<pre class="r"><code>team_id &lt;- 26
+<pre class="r"><code>con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;)
 
 match_ids &lt;- c(&quot;1343409&quot;)
 
-con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;)
-
 throw_ins &lt;- tbl(con, &quot;events&quot;) %&gt;%
   filter(match_id %in% match_ids) %&gt;%
-  #filter(teamId == team_id) %&gt;%
+  filter(teamId %in% team_ids) %&gt;%
   filter(type_name == &quot;Pass&quot;) %&gt;%
   filter(qualifiers %like% &quot;%ThrowIn%&quot;) %&gt;%
   collect()
 
 DBI::dbDisconnect(con)</code></pre>
+<pre class="r"><code>how_many_seconds &lt;- 7
+
+throw_ins_sub &lt;- head(throw_ins, 8)
+
+df_to_concat &lt;- list()
+ 
+for(i in 1:nrow(throw_ins_sub)) 
+{
+  match_id_filter &lt;- throw_ins_sub$match_id[[i]]
+  start_time &lt;- throw_ins_sub$minute[[i]]*60 + throw_ins_sub$second[[i]]
+  end_time &lt;- start_time + how_many_seconds
+  
+  team_id &lt;- throw_ins_sub$teamId[[i]]
+  
+  con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;)
+  
+  throw_in_scene &lt;- tbl(con, &quot;events&quot;) %&gt;%
+    filter(match_id == match_id_filter) %&gt;%
+    filter(between(minute*60 + second, start_time, end_time)) %&gt;%
+    collect()
+  
+  DBI::dbDisconnect(con)
+  
+}</code></pre>
 <pre class="r"><code>how_many_seconds &lt;- 7
 
 #throw_ins_sub &lt;- head(throw_ins, 19)
@@ -224,6 +246,7 @@ for(i in 1:nrow(throw_ins_sub))
   end_y &lt;- final_pass$PassEndY*0.68
   
   travel_from_throw_in &lt;- sum(throw_in_scene$Length)
+  if(is.na(travel_from_throw_in)){travel_from_throw_in &lt;- 0}
   throw_in_row$travel &lt;- travel_from_throw_in
   
   if(travel_from_throw_in &gt;= 30){
@@ -291,8 +314,7 @@ throw_ins_sub_time_short &lt;- throw_ins_sub_time %&gt;%
   mutate(tercile = ceiling(location_x/33))
 
 kept_possession &lt;- throw_ins_sub_poss_q %&gt;%
-  #group_by(season, league, teamId) %&gt;%
-  group_by(match_id, teamId) %&gt;%
+  group_by(season, league, teamId, tercile) %&gt;%
   summarize(kept_possession = mean(kept_possession), kept_possession_travel = mean(kept_possession_travel), layoff = mean(layoff))</code></pre>
 <pre class="r"><code>throw_ins_sub_time_q &lt;- throw_ins_sub_time %&gt;%
   mutate(tercile = ceiling(location_x/33))
@@ -318,12 +340,13 @@ length &lt;- merged_throw_in %&gt;%
   filter(time_to_throw_in &gt;= 10) %&gt;%
   group_by(teamId, tercile) %&gt;%
   summarize(length = mean(Length, na.rm = TRUE))</code></pre>
-<pre class="r"><code>angles &lt;- merged_throw_in %&gt;%
+<pre class="r"><code>angles &lt;- throw_ins_sub_poss_q %&gt;%
   mutate(PassEndY = as.numeric(PassEndY), PassEndX = as.numeric(PassEndX)) %&gt;%
   mutate(angle = atan2(abs(PassEndY - location_y), PassEndX - location_x)*180/pi) %&gt;%
-  select(event_id, teamId, tercile, location_x, location_y, PassEndX, PassEndY, angle, kept_possession) %&gt;%
+  select(event_id, season, teamId, tercile, location_x, location_y, PassEndX, PassEndY, angle, kept_possession) %&gt;%
   mutate(angle_class = if_else(angle &lt;= 60, &quot;Forward&quot;, if_else(angle &lt;= 120, &quot;Straight&quot;, &quot;Backward&quot;))) %&gt;%
-  group_by(teamId, tercile, angle_class) %&gt;%
+  filter(angle_class != &quot;Backward&quot;) %&gt;%
+  group_by(season, teamId, tercile) %&gt;%
   summarise(n = n(), kept = mean(kept_possession)) %&gt;%
   mutate(freq = n / sum(n))</code></pre>
 <pre class="r"><code>review &lt;- throw_ins_sub_poss %&gt;%
