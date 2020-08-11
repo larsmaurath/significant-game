@@ -16,6 +16,12 @@ showonlyimage: no
 
 
 
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="xG Model - Design and Implementation with R Tidymodels">
+<meta name="twitter:description" content="I have recently gone through the Google Machine Learning crash course and was looking for a project to apply these skills to. Coincidentally, it is also not that long ago that **tidymodels** has gained some traction (at least in my twitter feed) and I am keen to try it out. ">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/xg_viz.png">
 <p>I have recently gone through the <a href="https://developers.google.com/machine-learning/" target="_blank">Google Machine Learning crash course</a> and was looking for a project to apply these skills to. Coincidentally, it is also not that long ago that <strong>tidymodels</strong> has gained some traction (at least in my twitter feed) and I am keen to try it out.</p>
 <p>Of course an <em>Expected Goals</em>-model is a great excuse to combine the two items above. It is relatively easy to set up, readers of this blog will not need a lengthy introduction to the thought process behind it and the feature set used to explain the probability of shots leading to goal is very intuitive.</p>
 <p>Of course, there has already been written so much about <em>xG</em>-models and I am also certainly not the first to implement it in R. So let me give a quick overview about the best writing I have seen to then give some thoughts about what I hope to add to the discussion with this post.</p>
@@ -121,14 +127,14 @@ xg_wflow &lt;-
   add_recipe(xg_recipe)
 
 xg_wflow</code></pre>
-<pre><code>## ══ Workflow ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+<pre><code>## ══ Workflow ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 ## Preprocessor: Recipe
 ## Model: logistic_reg()
 ## 
-## ── Preprocessor ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ── Preprocessor ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ## 0 Recipe Steps
 ## 
-## ── Model ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ── Model ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ## Logistic Regression Model Specification (classification)
 ## 
 ## Computational engine: glm</code></pre>

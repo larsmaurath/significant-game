@@ -14,6 +14,13 @@ image: 'img/portfolio/xg_viz.png'
 showonlyimage: no
 ---
 
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="xG Model - Design and Implementation with R Tidymodels">
+<meta name="twitter:description" content="I have recently gone through the Google Machine Learning crash course and was looking for a project to apply these skills to. Coincidentally, it is also not that long ago that **tidymodels** has gained some traction (at least in my twitter feed) and I am keen to try it out. ">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/xg_viz.png">
+
 I have recently gone through the [Google Machine Learning crash course](https://developers.google.com/machine-learning/){target="_blank"} and was looking for a project to apply these skills to. Coincidentally, it is also not that long ago that **tidymodels** has gained some traction (at least in my twitter feed) and I am keen to try it out. 
 
 Of course an *Expected Goals*-model is a great excuse to combine the two items above. It is relatively easy to set up, readers of this blog will not need a lengthy introduction to the thought process behind it and the feature set used to explain the probability of shots leading to goal is very intuitive.
