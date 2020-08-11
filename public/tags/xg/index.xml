@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>xG on The Significant Game</title>
+    <link>/tags/xg/</link>
+    <description>Recent content in xG on The Significant Game</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 07 Aug 2020 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/xg/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>xG Model - Accuracy and Goodness-Of-Fit</title>
+      <link>/portfolio/xg-model-accuracy-and-goodness-of-fit/</link>
+      <pubDate>Fri, 07 Aug 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/xg-model-accuracy-and-goodness-of-fit/</guid>
+      <description>In the first part of this series we constructed a simple expected Goals-model solely relying on two predictors: the distance and angle from goal for each shot. As you remember, our model past the eye test, i.e. it maps shot locations to xG-values that make intuitive sense to us. In this post we want to evaluate the quality of this model more formally with tidymodels’ yardstick package.
+As a reminder, a visualization of our xG-estimates from the first part of this series.</description>
+    </item>
+    
+    <item>
+      <title>xG Model - Design and Implementation with R Tidymodels</title>
+      <link>/portfolio/expected-goals-model-with-tidymodels/</link>
+      <pubDate>Fri, 07 Aug 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/expected-goals-model-with-tidymodels/</guid>
+      <description>I have recently gone through the Google Machine Learning crash course and was looking for a project to apply these skills to. Coincidentally, it is also not that long ago that tidymodels has gained some traction (at least in my twitter feed) and I am keen to try it out.
+Of course an Expected Goals-model is a great excuse to combine the two items above. It is relatively easy to set up, readers of this blog will not need a lengthy introduction to the thought process behind it and the feature set used to explain the probability of shots leading to goal is very intuitive.</description>
+    </item>
+    
+    <item>
+      <title>Expected Goals Model - Applications</title>
+      <link>/portfolio/expected-goals-model-applications/</link>
+      <pubDate>Tue, 04 Aug 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/expected-goals-model-applications/</guid>
+      <description>xg time line xG Shots Histogram
+library(dbplyr) # database access library(DBI) # database access library(tidyverse) # dataframe manipulation library(tidymodels) # data processing and modeling source(&amp;quot;../data/pitch_plots.r&amp;quot;) # helper function to plot the pitch con &amp;lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &amp;quot;~/Documents/Blog/Data/data.sqlite&amp;quot;) matches &amp;lt;- tbl(con, &amp;quot;matches&amp;quot;) %&amp;gt;% filter(league %in% c(&amp;quot;Germany&amp;quot;)) %&amp;gt;% filter(season %in% c(&amp;quot;2018/2019&amp;quot;)) %&amp;gt;% collect() DBI::dbDisconnect(con) match_ids &amp;lt;- unique(matches$match_id) con &amp;lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &amp;quot;~/Documents/Blog/Data/data.sqlite&amp;quot;) shots &amp;lt;- tbl(con, &amp;quot;events&amp;quot;) %&amp;gt;% filter(match_id %in% match_ids) %&amp;gt;% filter(teamId == 37) %&amp;gt;% filter(isShot == 1) %&amp;gt;% collect() DBI::dbDisconnect(con) shots &amp;lt;- merge(shots, matches %&amp;gt;% select(match_id, season), by = &amp;quot;match_id&amp;quot;) shots_ext &amp;lt;- shots %&amp;gt;% mutate(isGoal = as.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,9 +1,9 @@
 {
-    "path" : "~/Documents/GitHub/significant-game",
-    "sortOrder" : [
+    "path": "~/Documents/GitHub/significant-game",
+    "sortOrder": [
         {
-            "ascending" : true,
-            "columnIndex" : 2
+            "columnIndex": 2,
+            "ascending": true
         }
     ]
 }

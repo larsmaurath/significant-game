@@ -113,6 +113,93 @@ if (!doNotTrack) {
                   <div class="box-masonry">
                       
                         
+                        <a href="/portfolio/xg-model-accuracy-and-goodness-of-fit/" title="" class="box-masonry-image with-hover-overlay with-hover-icon">
+                        
+                            <img src="/img/portfolio/xg_viz.png" alt="" class="img-responsive">
+                        </a>
+                      
+                      
+                      <div class="box-masonry-text">
+                      
+                          <h4><a href="/portfolio/xg-model-accuracy-and-goodness-of-fit/">xG Model - Accuracy and Goodness-Of-Fit</a></h4>
+                          <div class="box-masonry-description">
+                            <p>
+                                
+                                  In the first part of this series we constructed a simple expected Goals-model solely relying on two predictors: the distance and angle from goal for each shot. As you remember, our model past the eye test, i.e. it maps shot locations to xG-values that make intuitive sense to us. In this post we want to evaluate the quality of this model more formally with tidymodels’ yardstick package.
+As a reminder, a visualization of our xG-estimates from the first part of this series.
+                                
+                            </p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          
+              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
+                  <div class="box-masonry">
+                      
+                        
+                        <a href="/portfolio/expected-goals-model-with-tidymodels/" title="" class="box-masonry-image with-hover-overlay with-hover-icon">
+                        
+                            <img src="/img/portfolio/xg_viz.png" alt="" class="img-responsive">
+                        </a>
+                      
+                      
+                      <div class="box-masonry-text">
+                      
+                          <h4><a href="/portfolio/expected-goals-model-with-tidymodels/">xG Model - Design and Implementation with R Tidymodels</a></h4>
+                          <div class="box-masonry-description">
+                            <p>
+                                
+                                  I have recently gone through the Google Machine Learning crash course and was looking for a project to apply these skills to. Coincidentally, it is also not that long ago that tidymodels has gained some traction (at least in my twitter feed) and I am keen to try it out.
+Of course an Expected Goals-model is a great excuse to combine the two items above. It is relatively easy to set up, readers of this blog will not need a lengthy introduction to the thought process behind it and the feature set used to explain the probability of shots leading to goal is very intuitive.
+                                
+                            </p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          
+              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
+                  <div class="box-masonry">
+                      
+                      
+                      <div class="box-masonry-text">
+                      
+                          <h4><a href="/portfolio/expected-goals-model-applications/">Expected Goals Model - Applications</a></h4>
+                          <div class="box-masonry-description">
+                            <p>
+                                
+                                  xg time line xG Shots Histogram
+library(dbplyr) # database access library(DBI) # database access library(tidyverse) # dataframe manipulation library(tidymodels) # data processing and modeling source(&quot;../data/pitch_plots.r&quot;) # helper function to plot the pitch con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;) matches &lt;- tbl(con, &quot;matches&quot;) %&gt;% filter(league %in% c(&quot;Germany&quot;)) %&gt;% filter(season %in% c(&quot;2018/2019&quot;)) %&gt;% collect() DBI::dbDisconnect(con) match_ids &lt;- unique(matches$match_id) con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;) shots &lt;- tbl(con, &quot;events&quot;) %&gt;% filter(match_id %in% match_ids) %&gt;% filter(teamId == 37) %&gt;% filter(isShot == 1) %&gt;% collect() DBI::dbDisconnect(con) shots &lt;- merge(shots, matches %&gt;% select(match_id, season), by = &quot;match_id&quot;) shots_ext &lt;- shots %&gt;% mutate(isGoal = as.
+                                
+                            </p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          
+              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
+                  <div class="box-masonry">
+                      
+                      
+                      <div class="box-masonry-text">
+                      
+                          <h4><a href="/portfolio/chipb%C3%A4lle/">Chipbälle</a></h4>
+                          <div class="box-masonry-description">
+                            <p>
+                                
+                                   ## `summarise()` regrouping output by &#39;season&#39; (override with `.groups` argument) ## Warning: Package `magick` is required to draw images. Image not drawn. 
+                                
+                            </p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          
+              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
+                  <div class="box-masonry">
+                      
+                        
                         <a href="/portfolio/incorporate-d3-into-a-r-workflow/" title="" class="box-masonry-image with-hover-overlay with-hover-icon">
                         
                             <img src="/img/portfolio/d3_workflow.png" alt="" class="img-responsive">

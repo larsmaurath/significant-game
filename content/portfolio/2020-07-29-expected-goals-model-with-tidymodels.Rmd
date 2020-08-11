@@ -1,0 +1,236 @@
+---
+title: xG Model - Design and Implementation with R Tidymodels
+author: Lars Maurath
+date: '2020-08-07'
+slug: expected-goals-model-with-tidymodels
+categories: []
+tags:
+  - Expected Goals
+  - xG
+  - tidyverse
+  - tidymodels
+  - tutorial
+image: 'img/portfolio/xg_viz.png'
+showonlyimage: no
+---
+
+I have recently gone through the [Google Machine Learning crash course](https://developers.google.com/machine-learning/){target="_blank"} and was looking for a project to apply these skills to. Coincidentally, it is also not that long ago that **tidymodels** has gained some traction (at least in my twitter feed) and I am keen to try it out. 
+
+Of course an *Expected Goals*-model is a great excuse to combine the two items above. It is relatively easy to set up, readers of this blog will not need a lengthy introduction to the thought process behind it and the feature set used to explain the probability of shots leading to goal is very intuitive.
+
+Of course, there has already been written so much about *xG*-models and I am also certainly not the first to implement it in R. So let me give a quick overview about the best writing I have seen to then give some thoughts about what I hope to add to the discussion with this post.
+
+1) David Sumpter's Friends-of-Tracking initiative on [Youtube](https://www.youtube.com/channel/UCUBFJYcag8j2rm_9HkrrA7w){target="_blank"}  
+2) The DTAI Sports Analytics Lab of KU Kleuven has an outstanding [blog](https://dtai.cs.kuleuven.be/sports/blog){target="_blank"} focused on machine learning techniques in soccer analytics
+3) American Soccer Analysis consistently publishes great and detailed [articles](https://www.americansocceranalysis.com/home/2015/4/14/expected-goals-methodology){target="_blank"} on data-driven aspects of the game
+
+I am missing the earlier history of the process that is the creation of the *expected goals* metric, but it is not my goal to come up with this timeline, but to highlight the articles and videos I found most useful.
+
+To avoid being redundant I will try to outline how to implement xG-models in a modern tidy R framework via *tidymodels*, to evaluate the fit of the model through methods I learned through the Google's ML course and to finally contrast what xG-models are and aren't good at. In this first post I will show how to implement a simple xG-model.
+
+Let's start by loading the necessary libraries and helper functions.
+
+```{r Load Libraries, echo=TRUE, message=FALSE, warning=FALSE}
+library(dbplyr) # database access
+library(DBI) # database access
+library(tidyverse) # dataframe manipulation
+library(tidymodels) # data processing and modeling
+
+source("../data/pitch_plots.r") # helper function to plot the pitch
+```
+
+```{r Load Data, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "~/Documents/Blog/Data/data.sqlite")
+
+matches <- tbl(con, "matches") %>%
+  filter(league %in% c("Germany", "England", "Spain", "Italy", "France")) %>%
+  filter(season %in% c("2016/2017", "2015/2016", "2014/2015")) %>%
+  collect()
+
+DBI::dbDisconnect(con)
+
+match_ids <- unique(matches$match_id)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "~/Documents/Blog/Data/data.sqlite")
+
+shots <- tbl(con, "events") %>%
+  filter(match_id %in% match_ids) %>%
+  filter(isShot == 1) %>%
+  collect()
+
+DBI::dbDisconnect(con)
+```
+
+<br>
+
+You can see our initial dataset below. This is bare-bones event data represented in a wide dataframe with each row representing one shot. Notably we do not have any information on the shooter, the teams or the match. For our initial model we will actually only use the three left most columns which hold information on the location and the outcome of each shot. These are all open-play shots, meaning that I made sure to filter out any headers, penalties, shots after corners or from free kicks.
+
+```{r Original Data, echo=FALSE}
+shots_ext <- shots %>%
+  mutate(isGoal = as.numeric(isGoal)) %>%
+  mutate(isGoal = if_else(is.na(isGoal), 0, isGoal)) %>%
+  rename(is_goal = isGoal) %>%
+  select(location_x, location_y, is_goal, qualifiers) %>%
+  filter(location_x > 50) %>%
+  rowwise() %>%
+  mutate(big_chance = if_else(grepl("BigChance", qualifiers), 1, 0)) %>%
+  mutate(header = if_else(grepl("Head", qualifiers), 1, 0)) %>%
+  mutate(from_corner = if_else(grepl("FromCorner", qualifiers), 1, 0)) %>%
+  mutate(from_fk = if_else(grepl("SetPiece", qualifiers), 1, 0)) %>%
+  mutate(direct_fk = if_else(grepl("DirectFreekick", qualifiers), 1, 0)) %>%
+  mutate(penalty = if_else(grepl("Penalty", qualifiers), 1, 0)) %>%
+  mutate(assisted = if_else(grepl("Assisted", qualifiers), 1, 0)) %>%
+  mutate(intentional_assist = if_else(grepl("IntentionalAssist", qualifiers), 1, 0)) %>%
+  mutate(fast_break = if_else(grepl("FastBreak", qualifiers), 1, 0)) %>%
+  ungroup() %>%
+  select(-qualifiers) %>%
+  filter(header == 0 & from_corner == 0 & from_fk == 0 & direct_fk == 0)
+  
+shots_ext
+```
+
+<br>
+
+Next I start with the feature engineering step. While you can certainly use the raw position information for predicting the xG-value of a shot, we follow the Friends-of-Tracking (FoT) tutorial by creating a distance and an angle metric. 
+
+```{r Enrich Data}
+distance <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+  
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- abs(50 - y_pos)*y_meters/100
+  
+  distance <- sqrt(x_shift*x_shift + y_shift*y_shift)
+}
+
+goal_angle <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- (50 - y_pos)*y_meters/100
+  
+  angle <- atan((7.32*x_shift)/(x_shift*x_shift + y_shift*y_shift - (7.32/2)*(7.32/2)))
+  angle <- ifelse(angle < 0, angle + pi, angle)
+  
+  angle_degrees <- angle*180/pi
+}
+
+shots_ext <- shots_ext %>%
+  rowwise() %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) %>% # based on available goal mouth
+  ungroup()
+```
+
+<br>
+
+In the next step we are making use of the *tidymodels* package the first time. Our goal is to shuffle our shot data and to split it into a training and a testing set. The shuffling ensures that we eliminate any unwanted patterns in the data. The shots could potentially be sorted by distance to goal in a way that the training data only contains shots outside of the 6 yard box. This would likely lead to suboptimal results when we apply our fitted model to real life data.
+
+Two more small points to highlight:
+- In the first line we format the shot outcome from numeric to factor. This is necessary as the label for the logistic regressions needs to be a categorical variable. 
+- When we define our recipe we first include the raw location data (location_x and location_y) in our formula, to then give them the role of "ID". This lets us keep the location information in our dataframe without using them as predictors in our regression. 
+
+I do not particularly like this design principle but it enables us to later compare our xG estimation directly to the location of the shot. 
+
+```{r Prepare Data for Model}
+shots_ext$is_goal <- factor(shots_ext$is_goal, levels = c("1", "0"))
+
+set.seed(seed = 1972) 
+
+train_test_split <- initial_split(data = shots_ext, prop = 0.80) 
+
+train_data <- train_test_split %>% training() 
+test_data  <- train_test_split %>% testing()
+
+xg_recipe <- 
+  recipe(is_goal ~ distance + angle + location_x + location_y, data = train_data) %>% 
+  update_role(location_x, location_y, new_role = "ID") 
+
+summary(xg_recipe)
+```
+
+<br>
+
+Next we define our model to then combine it with our recipe to a model workflow. Our model is a simple logistic regression executed by the *glm* engine. 
+
+At this point you have the flexibility to change the engine to other regression/machine learning libraries like *keras*. The great advantage of *tidymodels* is that you can do so without changing anything else in your code. The package deals with different conventions and formats in the background.
+
+```{r Define Model Workflow}
+model <- logistic_reg() %>% 
+  set_engine("glm")
+
+xg_wflow <- 
+  workflow() %>% 
+  add_model(model) %>% 
+  add_recipe(xg_recipe)
+
+xg_wflow
+```
+
+<br>
+
+We are now ready to fit our model and to inspect the estimated parameters and their significance.
+
+Let's first think about which sign the weights of our two predictor variables should have. For that we should first recall the sigmoid function used in the logistic regression
+
+![](/portfolio/2020-07-29-expected-goals-model-with-tidymodels_files/Screenshot 2020-08-07 at 14.53.35.png)
+
+This function ensures that our model's prediction will be between 0 and 1. 
+
+The longer the distance of the shot from goal, the lower the xG value should be. We therefore expect a *positive* weight for this predictor (larger argument for the exponential and therefore larger denominator). 
+
+The larger the angle of the shot, the higher the xG value should be. We therefore expect a *negative* weight for this predictor (smaller argument for the exponential and therefore smaller denominator). 
+
+We see both of these expectations satisfied in the below output. Additionally we also observe that all of our estimation are statistically significant.
+
+```{r Fit Model and Evaluate Fit}
+xg_fit <- 
+  xg_wflow %>% 
+  fit(data = train_data)
+
+xg_fit %>% 
+  pull_workflow_fit() %>% 
+  tidy()
+```
+
+<br>
+
+Let's go through a quick example to get an even better intuition for the model. Think about what the xG value should be for a shot from the penalty spot. Note that these are not actual penalties with unobstructed paths but open-play shots from around the penalty spot.
+
+![](/portfolio/2020-07-29-expected-goals-model-with-tidymodels_files/equation_2.png)
+
+Next we want to overlay a pitch plot with the output of our xG-model. For this we first need to create a dataframe of artificial shot data spanning the whole area of the pitch (or half pitch). Again we create our predictor variables and call the *predict*-function on this dataframe. We end up with a column named *xG* that contains an xG-estimate for each of these (artificial) shots.
+
+```{r Produce Artificial Data for Plotting}
+artificial_shots <- crossing(location_x = seq(50, 100, by = 0.5), location_y = seq(0, 100, by = 0.5)) %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) # angle based on available goal mouth
+
+data_to_plot <- predict(xg_fit, artificial_shots, type = "prob") %>% 
+  bind_cols(artificial_shots) %>%
+  rename("xG" = ".pred_1")
+```
+
+<br>
+
+Let's plot:
+
+```{r Plot Regression Output, echo=FALSE}
+pitch <- create_opta_ShotMap(grass_colour = "grey15", line_colour = "#8F8F8F", background_colour = "grey10", goal_colour = "#000000") +
+  geom_tile(data = data_to_plot, aes(x = location_y, y = location_x, fill = xG), alpha = 0.8) +
+  scale_fill_gradientn(values = c(0, 1),
+                       colours = c("grey15", "#440154FF", "#440154FF", "#3B528BFF", "#3B528BFF", "#21908CFF", "#21908CFF", "#5DC863FF", "#5DC863FF", "#FDE725FF", "#FDE725FF")) +
+  theme(legend.position = c(.5,.2),
+        legend.background = element_rect(fill = "grey15"),
+        legend.direction = "horizontal",
+        legend.text = element_text(color = "grey90", size = 8, family = "mono"),
+        legend.title = element_text(color = "grey90", size = 14, family = "mono", vjust = 0.8))
+
+pitch
+```
+
+This looks reasonable. We see the well-known circle-like shape radiating out from the goal line. The highest value is shown centrally in front of goal. xG values decrease further out and importantly decrease at with smaller angles. The xG estimates also make sense: we have already seen that an open-play shot from around the penalty spot results in a xG-Value of 0.25; centrally, just outside the 18 yard box we see a value of around 9% which also matches my expectation.
+
+In the next post I will try to evaluate some goodness-of-fit measures for this model to contrast applications that are suited for an xG-model and those that are not.

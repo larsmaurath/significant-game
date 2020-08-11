@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Expected Goals Model - Applications</title>
+<meta name="description" content="Describe your website">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="all,follow">
+<meta name="googlebot" content="index,follow,snippet,archive">
+<link rel="stylesheet" href="/css/bootstrap.min.css">
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:400,300,700,400italic">
+<link rel="stylesheet" href="/css/font-awesome.min.css">
+<link rel="stylesheet" href="/css/owl.carousel.css">
+<link rel="stylesheet" href="/css/owl.theme.css">
+
+
+  <link href="/css/style.green.css" rel="stylesheet" id="theme-stylesheet">
+  <script src="/js/highlight.pack.js"></script> 
+  <script>hljs.initHighlightingOnLoad();</script> 
+
+ 
+
+  
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+        <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  
+
+
+<link href="/css/custom.css" rel="stylesheet">
+<link rel="shortcut icon" href="/img/favicon.png">
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-156024236-3', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+</head>
+<body>
+  <div id="all">
+      <div class="container-fluid">
+          <div class="row row-offcanvas row-offcanvas-left">
+              <div id="sidebar" class="col-xs-6 col-sm-4 col-md-3 sidebar-offcanvas">
+  <div class="sidebar-content">
+    <h1 class="sidebar-heading"><a href="/">The Significant Game</a></h1>
+    
+      <p class="sidebar-p">Football and Data.</p>
+    
+    <ul class="sidebar-menu">
+      
+        <li><a href="/portfolio/">Home</a></li>
+      
+        <li><a href="/about/">About</a></li>
+      
+        <li><a href="/contact/">Get in touch</a></li>
+      
+    </ul>
+    <p class="social">
+  
+  
+  
+  <a href="https://twitter.com/thesignigame" data-animate-hover="pulse" class="external twitter">
+    <i class="fa fa-twitter"></i>
+  </a>
+  
+  
+  
+  
+  
+  
+  <a href="https://github.com/larsmaurath/significant-game" data-animate-hover="pulse" class="external">
+    <i class="fa fa-github"></i>
+  </a>
+  
+  
+  
+</p>
+
+
+    <div class="copyright">
+      <p class="credit">
+        
+        Template by <a href="https://bootstrapious.com/free-templates" class="external">Bootstrapious.com</a>
+
+&amp; ported to Hugo by <a href="https://github.com/kishaningithub">Kishan B</a>
+
+      </p>
+    </div>
+  </div>
+</div>
+
+              
+<div class="col-xs-12 col-sm-8 col-md-9 content-column white-background">
+  <div class="small-navbar visible-xs">
+  <button type="button" data-toggle="offcanvas" class="btn btn-ghost pull-left"> <i class="fa fa-align-left"> </i>Menu</button>
+  <h1 class="small-navbar-heading"><a href="/">The Significant Game</a></h1>
+</div>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="content-column-content">
+         <h1>Expected Goals Model - Applications</h1>
+         
+
+
+<p>xg time line
+xG Shots Histogram</p>
+<pre class="r"><code>library(dbplyr) # database access
+library(DBI) # database access
+library(tidyverse) # dataframe manipulation
+library(tidymodels) # data processing and modeling
+
+source(&quot;../data/pitch_plots.r&quot;) # helper function to plot the pitch</code></pre>
+<pre class="r"><code>con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;)
+
+matches &lt;- tbl(con, &quot;matches&quot;) %&gt;%
+  filter(league %in% c(&quot;Germany&quot;)) %&gt;%
+  filter(season %in% c(&quot;2018/2019&quot;)) %&gt;%
+  collect()
+
+DBI::dbDisconnect(con)
+
+match_ids &lt;- unique(matches$match_id)
+
+con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;)
+
+shots &lt;- tbl(con, &quot;events&quot;) %&gt;%
+  filter(match_id %in% match_ids) %&gt;%
+  filter(teamId == 37) %&gt;%
+  filter(isShot == 1) %&gt;%
+  collect()
+
+DBI::dbDisconnect(con)
+
+shots &lt;- merge(shots, matches %&gt;% select(match_id, season), by = &quot;match_id&quot;)
+
+shots_ext &lt;- shots %&gt;%
+  mutate(isGoal = as.numeric(isGoal)) %&gt;%
+  mutate(isGoal = if_else(is.na(isGoal), 0, isGoal)) %&gt;%
+  rename(is_goal = isGoal) %&gt;%
+  select(location_x, location_y, is_goal, qualifiers, season) %&gt;%
+  filter(location_x &gt; 50) %&gt;%
+  rowwise() %&gt;%
+  mutate(big_chance = if_else(grepl(&quot;BigChance&quot;, qualifiers), 1, 0)) %&gt;%
+  mutate(header = if_else(grepl(&quot;Head&quot;, qualifiers), 1, 0)) %&gt;%
+  mutate(from_corner = if_else(grepl(&quot;FromCorner&quot;, qualifiers), 1, 0)) %&gt;%
+  mutate(from_fk = if_else(grepl(&quot;SetPiece&quot;, qualifiers), 1, 0)) %&gt;%
+  mutate(direct_fk = if_else(grepl(&quot;DirectFreekick&quot;, qualifiers), 1, 0)) %&gt;%
+  mutate(penalty = if_else(grepl(&quot;Penalty&quot;, qualifiers), 1, 0)) %&gt;%
+  mutate(assisted = if_else(grepl(&quot;Assisted&quot;, qualifiers), 1, 0)) %&gt;%
+  mutate(intentional_assist = if_else(grepl(&quot;IntentionalAssist&quot;, qualifiers), 1, 0)) %&gt;%
+  mutate(fast_break = if_else(grepl(&quot;FastBreak&quot;, qualifiers), 1, 0)) %&gt;%
+  ungroup() %&gt;%
+  select(-qualifiers) %&gt;%
+  filter(header == 0 &amp; from_corner == 0 &amp; from_fk == 0 &amp; direct_fk == 0)
+
+distance &lt;- function(x_pos, y_pos){
+  x_meters &lt;- 95.4
+  y_meters &lt;- 76.25
+  
+  x_shift &lt;- (100 - x_pos)*x_meters/100
+  y_shift &lt;- abs(50 - y_pos)*y_meters/100
+  
+  distance &lt;- sqrt(x_shift*x_shift + y_shift*y_shift)
+}
+
+goal_angle &lt;- function(x_pos, y_pos){
+  x_meters &lt;- 95.4
+  y_meters &lt;- 76.25
+
+  x_shift &lt;- (100 - x_pos)*x_meters/100
+  y_shift &lt;- (50 - y_pos)*y_meters/100
+  
+  angle &lt;- atan((7.32*x_shift)/(x_shift*x_shift + y_shift*y_shift - (7.32/2)*(7.32/2)))
+  angle &lt;- ifelse(angle &lt; 0, angle + pi, angle)
+  
+  angle_degrees &lt;- angle*180/pi
+}
+
+shots_ext &lt;- shots_ext %&gt;%
+  rowwise() %&gt;%
+  mutate(distance = distance(location_x, location_y)) %&gt;% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) %&gt;% # angle based on available goal mouth
+  ungroup()
+
+xg_pred &lt;- 
+  predict(xg_fit, shots_ext, type = &quot;prob&quot;) %&gt;% 
+  bind_cols(shots_ext %&gt;% select(location_x, location_y, is_goal, season)) %&gt;%
+  mutate(is_goal_pred = factor(if_else(.pred_1 &gt;= 0.5, 1, 0), levels = c(&quot;1&quot;, &quot;0&quot;)))
+
+xg_pred %&gt;%
+  mutate(good_chance = if_else(.pred_1 &gt;= 0.25, 1, 0)) %&gt;%
+  group_by(season) %&gt;%
+  summarize(good_chance = mean(good_chance), n = n())
+
+ggplot(xg_pred, aes(x = .pred_1, fill = is_goal)) +
+  geom_histogram(binwidth = 0.02, aes(y = stat(count / sum(count)))) +
+  geom_density(aes(x = .pred_1, y = stat(count / sum(count)))) +
+  facet_wrap(~season)</code></pre>
+
+         <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-thesignificantgame-com" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+          </div>
+      </div>
+  </div>
+  <script src="/js/jquery.min.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/jquery.cookie.js"> </script>
+<script src="/js/ekko-lightbox.js"></script>
+<script src="/js/jquery.scrollTo.min.js"></script>
+<script src="/js/masonry.pkgd.min.js"></script>
+<script src="/js/imagesloaded.pkgd.min.js"></script>
+<script src="/js/owl.carousel.min.js"></script>
+<script src="/js/front.js"></script>
+
+
+
+</body>
+</html>

@@ -404,11 +404,11 @@ SIDEBAR + RIGHT COLUMN
   }
 }
 .content-column-content p.lead {
-  color: #555555;
+  color: #000000;
 }
 .content-column-content p,
 .content-column-content li {
-  color: #999999;
+  color: #000000;
 }
 .content-column-content ul li {
   list-style-type: none;
