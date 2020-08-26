@@ -6,7 +6,7 @@
     <description>Recent content in tidymodels on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 07 Aug 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 26 Aug 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/tidymodels/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,11 +14,14 @@
     <item>
       <title>xG Model - Accuracy and Goodness-Of-Fit</title>
       <link>/portfolio/xg-model-accuracy-and-goodness-of-fit/</link>
-      <pubDate>Fri, 07 Aug 2020 00:00:00 +0000</pubDate>
+      <pubDate>Wed, 26 Aug 2020 00:00:00 +0000</pubDate>
       
       <guid>/portfolio/xg-model-accuracy-and-goodness-of-fit/</guid>
-      <description>In the first part of this series we constructed a simple expected Goals-model solely relying on two predictors: the distance and angle from goal for each shot. As you remember, our model past the eye test, i.e. it maps shot locations to xG-values that make intuitive sense to us. In this post we want to evaluate the quality of this model more formally with tidymodels’ yardstick package.
-As a reminder, a visualization of our xG-estimates from the first part of this series.</description>
+      <description>In the first part of this series we constructed a simple expected Goals-model, solely relying on two predictors: the distance and angle from goal for each shot.
+As a reminder see below the visualization of our xG-estimates from the first part of this series:
+
+Our model passed the eye test, i.e. it maps shot locations to xG-values that make intuitive sense to us.
+In this post we want to evaluate the quality of this model more formally with tidymodels’ yardstick package.</description>
     </item>
     
     <item>

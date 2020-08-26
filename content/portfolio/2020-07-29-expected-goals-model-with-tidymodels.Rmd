@@ -91,7 +91,7 @@ shots_ext <- shots %>%
   mutate(fast_break = if_else(grepl("FastBreak", qualifiers), 1, 0)) %>%
   ungroup() %>%
   select(-qualifiers) %>%
-  filter(header == 0 & from_corner == 0 & from_fk == 0 & direct_fk == 0)
+  filter(header == 0 & from_corner == 0 & from_fk == 0 & direct_fk == 0 & penalty == 0)
   
 shots_ext
 ```

@@ -137,7 +137,7 @@ library(tidymodels) # data processing and modeling
 source(&quot;../data/pitch_plots.r&quot;) # helper function to plot the pitch</code></pre>
 <p><br></p>
 <p>You can see our initial dataset below. This is bare-bones event data represented in a wide dataframe with each row representing one shot. Notably we do not have any information on the shooter, the teams or the match. For our initial model we will actually only use the three left most columns which hold information on the location and the outcome of each shot. These are all open-play shots, meaning that I made sure to filter out any headers, penalties, shots after corners or from free kicks.</p>
-<pre><code>## # A tibble: 52,847 x 12
+<pre><code>## # A tibble: 51,981 x 12
 ##    location_x location_y is_goal big_chance header from_corner from_fk direct_fk
 ##         &lt;dbl&gt;      &lt;dbl&gt;   &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt;       &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;
 ##  1       74.8       64.5       0          0      0           0       0         0
@@ -150,7 +150,7 @@ source(&quot;../data/pitch_plots.r&quot;) # helper function to plot the pitch</c
 ##  8       78.6       51.1       0          0      0           0       0         0
 ##  9       79.5       41.5       0          0      0           0       0         0
 ## 10       70.8       55.7       0          0      0           0       0         0
-## # … with 52,837 more rows, and 4 more variables: penalty &lt;dbl&gt;, assisted &lt;dbl&gt;,
+## # … with 51,971 more rows, and 4 more variables: penalty &lt;dbl&gt;, assisted &lt;dbl&gt;,
 ## #   intentional_assist &lt;dbl&gt;, fast_break &lt;dbl&gt;</code></pre>
 <p><br></p>
 <p>Next I start with the feature engineering step. While you can certainly use the raw position information for predicting the xG-value of a shot, we follow the Friends-of-Tracking (FoT) tutorial by creating a distance and an angle metric.</p>
@@ -222,14 +222,14 @@ xg_wflow &lt;-
   add_recipe(xg_recipe)
 
 xg_wflow</code></pre>
-<pre><code>## ══ Workflow ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+<pre><code>## ══ Workflow ════════════════════════════════════════════════════════════════════
 ## Preprocessor: Recipe
 ## Model: logistic_reg()
 ## 
-## ── Preprocessor ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ── Preprocessor ────────────────────────────────────────────────────────────────
 ## 0 Recipe Steps
 ## 
-## ── Model ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ── Model ───────────────────────────────────────────────────────────────────────
 ## Logistic Regression Model Specification (classification)
 ## 
 ## Computational engine: glm</code></pre>
@@ -251,9 +251,9 @@ xg_fit %&gt;%
 <pre><code>## # A tibble: 3 x 5
 ##   term        estimate std.error statistic   p.value
 ##   &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
-## 1 (Intercept)   0.143    0.107        1.33 1.82e-  1
-## 2 distance      0.151    0.00471     32.0  6.71e-225
-## 3 angle        -0.0196   0.00161    -12.2  3.05e- 34</code></pre>
+## 1 (Intercept)   0.435    0.108        4.02 5.84e-  5
+## 2 distance      0.139    0.00473     29.4  1.25e-189
+## 3 angle        -0.0205   0.00161    -12.8  2.01e- 37</code></pre>
 <p><br></p>
 <p>Let’s go through a quick example to get an even better intuition for the model. Think about what the xG value should be for a shot from the penalty spot. Note that these are not actual penalties with unobstructed paths but open-play shots from around the penalty spot.</p>
 <p><img src="/portfolio/2020-07-29-expected-goals-model-with-tidymodels_files/equation_2.png" /></p>
