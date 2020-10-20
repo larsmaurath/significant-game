@@ -1,0 +1,145 @@
+---
+title: xG Model - Improving our Model with Additional Features
+author: Lars Maurath
+date: '2020-08-30'
+slug: xg-model-improving-our-model-with-additional-features
+categories: []
+tags:
+  - xG
+  - Expected Goals
+  - tidyverse
+  - tidymodels
+  - tutorial
+image: ''
+showonlyimage: no
+---
+
+
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="xG Model - Accuracy and Goodness-Of-Fit">
+<meta name="twitter:description" content="Our modeling problem is not much different to the classic machine learning application of classifying spam and non-spam emails. With an xG-model we try to predict the outcome of a shot based on properties associated with it (location, build-up, body part); for a spam-classification model you try predict if the email is unwanted spam based on properties associated with the email (sender, subject, certain words, language, time sent).">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/xg_viz.png">
+<p>In the first part of this series we constructed a simple <em>expected Goals</em>-model, solely relying on two predictors: the distance and angle from goal for each shot.</p>
+<pre class="r"><code>(open_play_pitch + header_pitch) / (corner_pitch + fb_pitch)</code></pre>
+<p><img src="/portfolio/2020-08-30-xg-model-improving-our-model-with-additional-features_files/figure-html/Combine%20pitch%20plots-1.png" width="672" /></p>
+<pre class="r"><code>distance &lt;- function(x_pos, y_pos){
+  x_meters &lt;- 95.4
+  y_meters &lt;- 76.25
+  
+  x_shift &lt;- (100 - x_pos)*x_meters/100
+  y_shift &lt;- abs(50 - y_pos)*y_meters/100
+  
+  distance &lt;- sqrt(x_shift*x_shift + y_shift*y_shift)
+}
+
+goal_angle &lt;- function(x_pos, y_pos){
+  x_meters &lt;- 95.4
+  y_meters &lt;- 76.25
+
+  x_shift &lt;- (100 - x_pos)*x_meters/100
+  y_shift &lt;- (50 - y_pos)*y_meters/100
+  
+  angle &lt;- atan((7.32*x_shift)/(x_shift*x_shift + y_shift*y_shift - (7.32/2)*(7.32/2)))
+  angle &lt;- ifelse(angle &lt; 0, angle + pi, angle)
+  
+  angle_degrees &lt;- angle*180/pi
+}
+
+shots_ext &lt;- shots_ext %&gt;%
+  rowwise() %&gt;%
+  mutate(distance = distance(location_x, location_y)) %&gt;% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) %&gt;% # based on available goal mouth
+  ungroup()</code></pre>
+<pre class="r"><code>shots_ext$is_goal &lt;- factor(shots_ext$is_goal, levels = c(&quot;1&quot;, &quot;0&quot;))
+
+set.seed(seed = 1972) 
+
+train_test_split &lt;- initial_split(data = shots_ext, prop = 0.80) 
+
+train_data &lt;- train_test_split %&gt;% training() 
+test_data  &lt;- train_test_split %&gt;% testing()
+
+xg_recipe &lt;- 
+  recipe(is_goal ~ distance + angle + header + from_corner + fast_break + location_x + location_y, data = train_data) %&gt;% 
+  update_role(location_x, location_y, new_role = &quot;ID&quot;) 
+
+xg_recipe &lt;-
+  recipe(is_goal ~ distance + angle + location_x + location_y, data = train_data) %&gt;%
+  update_role(location_x, location_y, new_role = &quot;ID&quot;)
+
+summary(xg_recipe)</code></pre>
+<pre><code>## # A tibble: 5 x 4
+##   variable   type    role      source  
+##   &lt;chr&gt;      &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;   
+## 1 distance   numeric predictor original
+## 2 angle      numeric predictor original
+## 3 location_x numeric ID        original
+## 4 location_y numeric ID        original
+## 5 is_goal    nominal outcome   original</code></pre>
+<pre class="r"><code>model &lt;- logistic_reg() %&gt;% 
+  set_engine(&quot;glm&quot;)
+
+xg_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(model) %&gt;% 
+  add_recipe(xg_recipe)
+
+xg_wflow</code></pre>
+<pre><code>## ══ Workflow ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+## Preprocessor: Recipe
+## Model: logistic_reg()
+## 
+## ── Preprocessor ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## 0 Recipe Steps
+## 
+## ── Model ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## Logistic Regression Model Specification (classification)
+## 
+## Computational engine: glm</code></pre>
+<pre class="r"><code>xg_fit &lt;- 
+  xg_wflow %&gt;% 
+  fit(data = train_data)
+
+xg_fit %&gt;% 
+  pull_workflow_fit() %&gt;% 
+  tidy()</code></pre>
+<pre><code>## # A tibble: 3 x 5
+##   term        estimate std.error statistic   p.value
+##   &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+## 1 (Intercept)   1.24     0.0891       13.9 1.11e- 43
+## 2 distance      0.104    0.00404      25.8 3.95e-147
+## 3 angle        -0.0196   0.00120     -16.3 8.45e- 60</code></pre>
+<pre class="r"><code>xg_pred &lt;- predict(xg_fit, test_data, type = &quot;prob&quot;) %&gt;% 
+  bind_cols(test_data) %&gt;%
+  rename(&quot;xG&quot; = &quot;.pred_1&quot;) %&gt;%
+  mutate(is_goal_pred = factor(if_else(xG &gt; 0.5, 1, 0), levels = c(&quot;1&quot;, &quot;0&quot;)))
+
+xg_pred %&gt;% 
+  metrics(truth = is_goal, is_goal_pred) %&gt;%
+  select(-.estimator) %&gt;%
+  filter(.metric == &quot;accuracy&quot;) </code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   .metric  .estimate
+##   &lt;chr&gt;        &lt;dbl&gt;
+## 1 accuracy     0.902</code></pre>
+<pre class="r"><code>tibble(
+  &quot;precision&quot; = 
+     precision(xg_pred, is_goal, is_goal_pred) %&gt;%
+     select(.estimate),
+  &quot;recall&quot; = 
+     recall(xg_pred, is_goal, is_goal_pred) %&gt;%
+     select(.estimate)
+) %&gt;%
+  unnest(cols = c(precision, recall))</code></pre>
+<pre><code>## # A tibble: 1 x 2
+##   precision recall
+##       &lt;dbl&gt;  &lt;dbl&gt;
+## 1     0.681 0.0656</code></pre>
+<p><img src="/portfolio/2020-08-30-xg-model-improving-our-model-with-additional-features_files/figure-html/Bias-1.png" width="672" /></p>
+<pre class="r"><code>xg_pred %&gt;% 
+  roc_curve(truth = is_goal, xG) %&gt;% 
+  autoplot()</code></pre>
+<p><img src="/portfolio/2020-08-30-xg-model-improving-our-model-with-additional-features_files/figure-html/ROC%20Curve-1.png" width="672" /></p>

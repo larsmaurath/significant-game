@@ -3,43 +3,63 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>/tags/expected-goals/</loc>
-    <lastmod>2020-08-26T00:00:00+00:00</lastmod>
+    <loc>/portfolio/first-look-at-skillcorner-s-free-tracking-dataset/</loc>
+    <lastmod>2020-10-18T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>/portfolio/</loc>
-    <lastmod>2020-08-26T00:00:00+00:00</lastmod>
+    <lastmod>2020-10-18T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/skillcorner/</loc>
+    <lastmod>2020-10-18T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>/tags/</loc>
-    <lastmod>2020-08-26T00:00:00+00:00</lastmod>
+    <lastmod>2020-10-18T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2020-08-26T00:00:00+00:00</lastmod>
+    <lastmod>2020-10-18T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/tags/tidymodels/</loc>
-    <lastmod>2020-08-26T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/tidyverse/</loc>
-    <lastmod>2020-08-26T00:00:00+00:00</lastmod>
+    <loc>/tags/tracking-data/</loc>
+    <lastmod>2020-10-18T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>/tags/tutorial/</loc>
-    <lastmod>2020-08-26T00:00:00+00:00</lastmod>
+    <lastmod>2020-10-18T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/expected-goals/</loc>
+    <lastmod>2020-08-30T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/tidymodels/</loc>
+    <lastmod>2020-08-30T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/tidyverse/</loc>
+    <lastmod>2020-08-30T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>/tags/xg/</loc>
-    <lastmod>2020-08-26T00:00:00+00:00</lastmod>
+    <lastmod>2020-08-30T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/portfolio/xg-model-improving-our-model-with-additional-features/</loc>
+    <lastmod>2020-08-30T00:00:00+00:00</lastmod>
   </url>
   
   <url>

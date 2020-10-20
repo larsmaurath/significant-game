@@ -113,6 +113,52 @@ if (!doNotTrack) {
                   <div class="box-masonry">
                       
                         
+                        <a href="/portfolio/first-look-at-skillcorner-s-free-tracking-dataset/" title="" class="box-masonry-image with-hover-overlay with-hover-icon">
+                        
+                            <img src="/img/portfolio/tease.gif" alt="" class="img-responsive">
+                        </a>
+                      
+                      
+                      <div class="box-masonry-text">
+                      
+                          <h4><a href="/portfolio/first-look-at-skillcorner-s-free-tracking-dataset/">First Look at SkillCorner&#39;s Open Source Tracking Dataset</a></h4>
+                          <div class="box-masonry-description">
+                            <p>
+                                
+                                  A couple of weeks ago another great dataset was made available to the soccer analytics community. In collaboration with Friends-of-Tracking the data provider SkillCorner open-sourced tracking data for nine top5 league matches.
+Here is the link of the 9 matches of broadcast tracking data, we&#39;re open sourcing today:https://t.co/4CnxCO1EAC
+We&#39;ll open source soon some tooling to help visualizing the data, computing derivatives or synchronizing the data with event data.
+&mdash; SkillCorner (@SkillCorner) October 8, 2020
+                                
+                            </p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          
+              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
+                  <div class="box-masonry">
+                      
+                      
+                      <div class="box-masonry-text">
+                      
+                          <h4><a href="/portfolio/xg-model-improving-our-model-with-additional-features/">xG Model - Improving our Model with Additional Features</a></h4>
+                          <div class="box-masonry-description">
+                            <p>
+                                
+                                  In the first part of this series we constructed a simple expected Goals-model, solely relying on two predictors: the distance and angle from goal for each shot.
+(open_play_pitch + header_pitch) / (corner_pitch + fb_pitch) distance &lt;- function(x_pos, y_pos){ x_meters &lt;- 95.4 y_meters &lt;- 76.25 x_shift &lt;- (100 - x_pos)*x_meters/100 y_shift &lt;- abs(50 - y_pos)*y_meters/100 distance &lt;- sqrt(x_shift*x_shift + y_shift*y_shift) } goal_angle &lt;- function(x_pos, y_pos){ x_meters &lt;- 95.4 y_meters &lt;- 76.
+                                
+                            </p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          
+              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
+                  <div class="box-masonry">
+                      
+                        
                         <a href="/portfolio/xg-model-accuracy-and-goodness-of-fit/" title="" class="box-masonry-image with-hover-overlay with-hover-icon">
                         
                             <img src="/img/portfolio/xg_viz.png" alt="" class="img-responsive">
@@ -173,7 +219,7 @@ Of course an Expected Goals-model is a great excuse to combine the two items abo
                             <p>
                                 
                                   xg time line xG Shots Histogram
-library(dbplyr) # database access library(DBI) # database access library(tidyverse) # dataframe manipulation library(tidymodels) # data processing and modeling source(&quot;../data/pitch_plots.r&quot;) # helper function to plot the pitch con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;) matches &lt;- tbl(con, &quot;matches&quot;) %&gt;% filter(league %in% c(&quot;Germany&quot;)) %&gt;% filter(season %in% c(&quot;2018/2019&quot;)) %&gt;% collect() DBI::dbDisconnect(con) match_ids &lt;- unique(matches$match_id) con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;) shots &lt;- tbl(con, &quot;events&quot;) %&gt;% filter(match_id %in% match_ids) %&gt;% filter(teamId == 37) %&gt;% filter(isShot == 1) %&gt;% collect() DBI::dbDisconnect(con) shots &lt;- merge(shots, matches %&gt;% select(match_id, season), by = &quot;match_id&quot;) shots_ext &lt;- shots %&gt;% mutate(isGoal = as.
+library(dbplyr) # database access library(DBI) # database access library(tidyverse) # dataframe manipulation library(tidymodels) # data processing and modeling source(&quot;../data/pitch_plots.r&quot;) # helper function to plot the pitch source(&quot;../data/pitch_plot.r&quot;) # helper function to plot the pitch source(&quot;../data/standardize_coordinates.r&quot;) # helper function to plot the pitch con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;) matches &lt;- tbl(con, &quot;matches&quot;) %&gt;% filter(league %in% c(&quot;Germany&quot;)) %&gt;% filter(season %in% c(&quot;2018/2019&quot;)) %&gt;% collect() DBI::dbDisconnect(con) match_ids &lt;- unique(matches$match_id) con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.
                                 
                             </p>
                           </div>

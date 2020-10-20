@@ -1,0 +1,204 @@
+---
+title: Expected Goals Model - Applications
+author: Lars Maurath
+date: '2020-08-04'
+slug: expected-goals-model-applications
+categories: []
+tags:
+  - Expected Goals
+  - xG
+  - tidymodels
+  - tidyverse
+  - tutorial
+image: ''
+showonlyimage: no
+---
+
+xg time line
+xG Shots Histogram
+
+```{r Load Libraries, echo=TRUE, message=FALSE, warning=FALSE}
+library(dbplyr) # database access
+library(DBI) # database access
+library(tidyverse) # dataframe manipulation
+library(tidymodels) # data processing and modeling
+
+source("../data/pitch_plots.r") # helper function to plot the pitch
+source("../data/pitch_plot.r") # helper function to plot the pitch
+source("../data/standardize_coordinates.r") # helper function to plot the pitch
+```
+
+```{r, cache=TRUE, eval=FALSE}
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "~/Documents/Blog/Data/data.sqlite")
+
+matches <- tbl(con, "matches") %>%
+  filter(league %in% c("Germany")) %>%
+  filter(season %in% c("2018/2019")) %>%
+  collect()
+
+DBI::dbDisconnect(con)
+
+match_ids <- unique(matches$match_id)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "~/Documents/Blog/Data/data.sqlite")
+
+shots <- tbl(con, "events") %>%
+  filter(match_id %in% match_ids) %>%
+  filter(teamId == 37) %>%
+  filter(isShot == 1) %>%
+  collect()
+
+DBI::dbDisconnect(con)
+
+shots <- merge(shots, matches %>% select(match_id, season), by = "match_id")
+
+shots_ext <- shots %>%
+  mutate(isGoal = as.numeric(isGoal)) %>%
+  mutate(isGoal = if_else(is.na(isGoal), 0, isGoal)) %>%
+  rename(is_goal = isGoal) %>%
+  select(location_x, location_y, is_goal, qualifiers, season) %>%
+  filter(location_x > 50) %>%
+  rowwise() %>%
+  mutate(big_chance = if_else(grepl("BigChance", qualifiers), 1, 0)) %>%
+  mutate(header = if_else(grepl("Head", qualifiers), 1, 0)) %>%
+  mutate(from_corner = if_else(grepl("FromCorner", qualifiers), 1, 0)) %>%
+  mutate(from_fk = if_else(grepl("SetPiece", qualifiers), 1, 0)) %>%
+  mutate(direct_fk = if_else(grepl("DirectFreekick", qualifiers), 1, 0)) %>%
+  mutate(penalty = if_else(grepl("Penalty", qualifiers), 1, 0)) %>%
+  mutate(assisted = if_else(grepl("Assisted", qualifiers), 1, 0)) %>%
+  mutate(intentional_assist = if_else(grepl("IntentionalAssist", qualifiers), 1, 0)) %>%
+  mutate(fast_break = if_else(grepl("FastBreak", qualifiers), 1, 0)) %>%
+  ungroup() %>%
+  select(-qualifiers) %>%
+  filter(header == 0 & from_corner == 0 & from_fk == 0 & direct_fk == 0 & penalty == 0)
+
+distance <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+  
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- abs(50 - y_pos)*y_meters/100
+  
+  distance <- sqrt(x_shift*x_shift + y_shift*y_shift)
+}
+
+goal_angle <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- (50 - y_pos)*y_meters/100
+  
+  angle <- atan((7.32*x_shift)/(x_shift*x_shift + y_shift*y_shift - (7.32/2)*(7.32/2)))
+  angle <- ifelse(angle < 0, angle + pi, angle)
+  
+  angle_degrees <- angle*180/pi
+}
+
+shots_ext <- shots_ext %>%
+  rowwise() %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) %>% # angle based on available goal mouth
+  ungroup()
+
+xg_pred <- 
+  predict(xg_fit, shots_ext, type = "prob") %>% 
+  bind_cols(shots_ext %>% select(location_x, location_y, is_goal, season)) %>%
+  mutate(is_goal_pred = factor(if_else(.pred_1 >= 0.5, 1, 0), levels = c("1", "0")))
+
+xg_pred %>%
+  mutate(good_chance = if_else(.pred_1 >= 0.25, 1, 0)) %>%
+  group_by(season) %>%
+  summarize(good_chance = mean(good_chance), n = n())
+
+ggplot(xg_pred, aes(x = .pred_1, fill = is_goal)) +
+  geom_histogram(binwidth = 0.02, aes(y = stat(count / sum(count)))) +
+  geom_density(aes(x = .pred_1, y = stat(count / sum(count)))) +
+  facet_wrap(~season)
+```
+
+```{r, eval=FALSE}
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "~/Documents/Blog/Data/data.sqlite")
+
+matches <- tbl(con, "matches") %>%
+  filter(league %in% c("Germany")) %>%
+  filter(season %in% c("2018/2019", "2017/2018", "2016/2017", "2015/2016", "2014/2015", "2013/2014", "2012/2013", "2011/2012", "2010/2011", "2009/2010", "2008/2009")) %>%
+  collect()
+
+DBI::dbDisconnect(con)
+
+match_ids <- unique(matches$match_id)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "~/Documents/Blog/Data/data.sqlite")
+
+shots <- tbl(con, "events") %>%
+  filter(match_id %in% match_ids) %>%
+  filter(teamId == 37) %>%
+  filter(isShot == 1) %>%
+  collect()
+
+DBI::dbDisconnect(con)
+
+shots <- merge(shots, matches %>% select(match_id, season), by = "match_id")
+
+shots_ext <- shots %>%
+  mutate(isGoal = as.numeric(isGoal)) %>%
+  mutate(isGoal = if_else(is.na(isGoal), 0, isGoal)) %>%
+  rename(is_goal = isGoal) %>%
+  select(location_x, location_y, is_goal, qualifiers, season) %>%
+  filter(location_x > 50) %>%
+  rowwise() %>%
+  mutate(big_chance = if_else(grepl("BigChance", qualifiers), 1, 0)) %>%
+  mutate(header = if_else(grepl("Head", qualifiers), 1, 0)) %>%
+  mutate(from_corner = if_else(grepl("FromCorner", qualifiers), 1, 0)) %>%
+  mutate(from_fk = if_else(grepl("SetPiece", qualifiers), 1, 0)) %>%
+  mutate(direct_fk = if_else(grepl("DirectFreekick", qualifiers), 1, 0)) %>%
+  mutate(penalty = if_else(grepl("Penalty", qualifiers), 1, 0)) %>%
+  mutate(assisted = if_else(grepl("Assisted", qualifiers), 1, 0)) %>%
+  mutate(intentional_assist = if_else(grepl("IntentionalAssist", qualifiers), 1, 0)) %>%
+  mutate(fast_break = if_else(grepl("FastBreak", qualifiers), 1, 0)) %>%
+  ungroup() %>%
+  select(-qualifiers) %>%
+  filter(header == 0 & from_corner == 0 & from_fk == 0 & direct_fk == 0 & penalty == 0)
+
+data <- shots_ext %>%
+  standardize_opta_x(cols = c("location_x")) %>%
+  standardize_opta_y(cols = c("location_y")) %>%
+  mutate(distance = distance(location_x, location_y)) %>%
+  mutate(angle = goal_angle(location_x, location_y)) %>%
+  mutate(xg = 1/(1+exp(0.0435 + 0.138*distance - 0.0144*angle)))
+
+perc_dist <- data %>%
+  group_by(season) %>%
+  summarize(perc_xg = quantile(distance, 0.25), n = n())
+
+first <- plot_pitch(type = "offensive_half", orientation = "vertical", direction_arrow = FALSE) +
+  geom_point(data = data %>% filter(season == "2010/2011"), aes(x = location_x, y = location_y))
+
+second <- plot_pitch(type = "offensive_half", orientation = "vertical", direction_arrow = FALSE) +
+  geom_point(data = data %>% filter(season == "2011/2012"), aes(x = location_x, y = location_y))
+
+third <- plot_pitch(type = "offensive_half", orientation = "vertical", direction_arrow = FALSE) +
+  geom_point(data = data %>% filter(season == "2012/2013"), aes(x = location_x, y = location_y))
+
+fourth <- plot_pitch(type = "offensive_half", orientation = "vertical", direction_arrow = FALSE) +
+  geom_point(data = data %>% filter(season == "2013/2014"), aes(x = location_x, y = location_y))
+
+fifth <- plot_pitch(type = "offensive_half", orientation = "vertical", direction_arrow = FALSE) +
+  geom_point(data = data %>% filter(season == "2014/2015"), aes(x = location_x, y = location_y))
+
+sixth <- plot_pitch(type = "offensive_half", orientation = "vertical", direction_arrow = FALSE) +
+  geom_point(data = data %>% filter(season == "2015/2016"), aes(x = location_x, y = location_y))
+
+seventh <- plot_pitch(type = "offensive_half", orientation = "vertical", direction_arrow = FALSE) +
+  geom_point(data = data %>% filter(season == "2016/2017"), aes(x = location_x, y = location_y))
+
+eight <- plot_pitch(type = "offensive_half", orientation = "vertical", direction_arrow = FALSE) +
+  geom_point(data = data %>% filter(season == "2017/2018"), aes(x = location_x, y = location_y))
+
+nineth <- plot_pitch(type = "offensive_half", orientation = "vertical", direction_arrow = FALSE) +
+  geom_point(data = data %>% filter(season == "2018/2019"), aes(x = location_x, y = location_y))
+
+(first + second + third) / (fourth + fifth + sixth) / (seventh + eight + nineth)
+```
+

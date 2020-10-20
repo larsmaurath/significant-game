@@ -6,15 +6,42 @@
     <description>Recent content in Tags on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 26 Aug 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 18 Oct 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
+      <title>SkillCorner</title>
+      <link>/tags/skillcorner/</link>
+      <pubDate>Sun, 18 Oct 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/skillcorner/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Tracking Data</title>
+      <link>/tags/tracking-data/</link>
+      <pubDate>Sun, 18 Oct 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/tracking-data/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>tutorial</title>
+      <link>/tags/tutorial/</link>
+      <pubDate>Sun, 18 Oct 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/tutorial/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Expected Goals</title>
       <link>/tags/expected-goals/</link>
-      <pubDate>Wed, 26 Aug 2020 00:00:00 +0000</pubDate>
+      <pubDate>Sun, 30 Aug 2020 00:00:00 +0000</pubDate>
       
       <guid>/tags/expected-goals/</guid>
       <description></description>
@@ -23,7 +50,7 @@
     <item>
       <title>tidymodels</title>
       <link>/tags/tidymodels/</link>
-      <pubDate>Wed, 26 Aug 2020 00:00:00 +0000</pubDate>
+      <pubDate>Sun, 30 Aug 2020 00:00:00 +0000</pubDate>
       
       <guid>/tags/tidymodels/</guid>
       <description></description>
@@ -32,25 +59,16 @@
     <item>
       <title>tidyverse</title>
       <link>/tags/tidyverse/</link>
-      <pubDate>Wed, 26 Aug 2020 00:00:00 +0000</pubDate>
+      <pubDate>Sun, 30 Aug 2020 00:00:00 +0000</pubDate>
       
       <guid>/tags/tidyverse/</guid>
       <description></description>
     </item>
     
     <item>
-      <title>tutorial</title>
-      <link>/tags/tutorial/</link>
-      <pubDate>Wed, 26 Aug 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/tutorial/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>xG</title>
       <link>/tags/xg/</link>
-      <pubDate>Wed, 26 Aug 2020 00:00:00 +0000</pubDate>
+      <pubDate>Sun, 30 Aug 2020 00:00:00 +0000</pubDate>
       
       <guid>/tags/xg/</guid>
       <description></description>

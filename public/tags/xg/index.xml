@@ -6,10 +6,20 @@
     <description>Recent content in xG on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 26 Aug 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 30 Aug 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/xg/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>xG Model - Improving our Model with Additional Features</title>
+      <link>/portfolio/xg-model-improving-our-model-with-additional-features/</link>
+      <pubDate>Sun, 30 Aug 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/xg-model-improving-our-model-with-additional-features/</guid>
+      <description>In the first part of this series we constructed a simple expected Goals-model, solely relying on two predictors: the distance and angle from goal for each shot.
+(open_play_pitch + header_pitch) / (corner_pitch + fb_pitch) distance &amp;lt;- function(x_pos, y_pos){ x_meters &amp;lt;- 95.4 y_meters &amp;lt;- 76.25 x_shift &amp;lt;- (100 - x_pos)*x_meters/100 y_shift &amp;lt;- abs(50 - y_pos)*y_meters/100 distance &amp;lt;- sqrt(x_shift*x_shift + y_shift*y_shift) } goal_angle &amp;lt;- function(x_pos, y_pos){ x_meters &amp;lt;- 95.4 y_meters &amp;lt;- 76.</description>
+    </item>
     
     <item>
       <title>xG Model - Accuracy and Goodness-Of-Fit</title>
@@ -41,7 +51,7 @@ Of course an Expected Goals-model is a great excuse to combine the two items abo
       
       <guid>/portfolio/expected-goals-model-applications/</guid>
       <description>xg time line xG Shots Histogram
-library(dbplyr) # database access library(DBI) # database access library(tidyverse) # dataframe manipulation library(tidymodels) # data processing and modeling source(&amp;quot;../data/pitch_plots.r&amp;quot;) # helper function to plot the pitch con &amp;lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &amp;quot;~/Documents/Blog/Data/data.sqlite&amp;quot;) matches &amp;lt;- tbl(con, &amp;quot;matches&amp;quot;) %&amp;gt;% filter(league %in% c(&amp;quot;Germany&amp;quot;)) %&amp;gt;% filter(season %in% c(&amp;quot;2018/2019&amp;quot;)) %&amp;gt;% collect() DBI::dbDisconnect(con) match_ids &amp;lt;- unique(matches$match_id) con &amp;lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &amp;quot;~/Documents/Blog/Data/data.sqlite&amp;quot;) shots &amp;lt;- tbl(con, &amp;quot;events&amp;quot;) %&amp;gt;% filter(match_id %in% match_ids) %&amp;gt;% filter(teamId == 37) %&amp;gt;% filter(isShot == 1) %&amp;gt;% collect() DBI::dbDisconnect(con) shots &amp;lt;- merge(shots, matches %&amp;gt;% select(match_id, season), by = &amp;quot;match_id&amp;quot;) shots_ext &amp;lt;- shots %&amp;gt;% mutate(isGoal = as.</description>
+library(dbplyr) # database access library(DBI) # database access library(tidyverse) # dataframe manipulation library(tidymodels) # data processing and modeling source(&amp;quot;../data/pitch_plots.r&amp;quot;) # helper function to plot the pitch source(&amp;quot;../data/pitch_plot.r&amp;quot;) # helper function to plot the pitch source(&amp;quot;../data/standardize_coordinates.r&amp;quot;) # helper function to plot the pitch con &amp;lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &amp;quot;~/Documents/Blog/Data/data.sqlite&amp;quot;) matches &amp;lt;- tbl(con, &amp;quot;matches&amp;quot;) %&amp;gt;% filter(league %in% c(&amp;quot;Germany&amp;quot;)) %&amp;gt;% filter(season %in% c(&amp;quot;2018/2019&amp;quot;)) %&amp;gt;% collect() DBI::dbDisconnect(con) match_ids &amp;lt;- unique(matches$match_id) con &amp;lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &amp;quot;~/Documents/Blog/Data/data.</description>
     </item>
     
   </channel>

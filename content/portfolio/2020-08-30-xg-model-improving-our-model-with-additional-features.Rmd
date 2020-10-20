@@ -1,0 +1,652 @@
+---
+title: xG Model - Improving our Model with Additional Features
+author: Lars Maurath
+date: '2020-08-30'
+slug: xg-model-improving-our-model-with-additional-features
+categories: []
+tags:
+  - xG
+  - Expected Goals
+  - tidyverse
+  - tidymodels
+  - tutorial
+image: ''
+showonlyimage: no
+---
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="xG Model - Accuracy and Goodness-Of-Fit">
+<meta name="twitter:description" content="Our modeling problem is not much different to the classic machine learning application of classifying spam and non-spam emails. With an xG-model we try to predict the outcome of a shot based on properties associated with it (location, build-up, body part); for a spam-classification model you try predict if the email is unwanted spam based on properties associated with the email (sender, subject, certain words, language, time sent).">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/xg_viz.png">
+
+In the first part of this series we constructed a simple *expected Goals*-model, solely relying on two predictors: the distance and angle from goal for each shot.
+
+```{r Load Libraries, echo=FALSE, message=FALSE, warning=FALSE}
+library(dbplyr) # database access
+library(DBI) # database access
+library(tidyverse) # dataframe manipulation
+library(tidymodels) # data processing and modeling
+library(patchwork) # combining plots
+
+source("../data/pitch_plots.r") # helper function to plot the pitch
+```
+
+```{r Load Data, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "~/Documents/Blog/Data/data.sqlite")
+
+matches <- tbl(con, "matches") %>%
+  filter(league %in% c("Germany", "England", "Spain", "Italy", "France")) %>%
+  filter(season %in% c("2016/2017", "2015/2016", "2014/2015")) %>%
+  collect()
+
+DBI::dbDisconnect(con)
+
+match_ids <- unique(matches$match_id)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "~/Documents/Blog/Data/data.sqlite")
+
+shots <- tbl(con, "events") %>%
+  filter(match_id %in% match_ids) %>%
+  filter(isShot == 1) %>%
+  collect()
+
+DBI::dbDisconnect(con)
+```
+
+```{r Open-Play Data, echo=FALSE}
+shots_ext <- shots %>%
+  mutate(isGoal = as.numeric(isGoal)) %>%
+  mutate(isGoal = if_else(is.na(isGoal), 0, isGoal)) %>%
+  rename(is_goal = isGoal) %>%
+  select(location_x, location_y, is_goal, qualifiers) %>%
+  filter(location_x > 50) %>%
+  rowwise() %>%
+  mutate(big_chance = if_else(grepl("BigChance", qualifiers), 1, 0)) %>%
+  mutate(header = if_else(grepl("Head", qualifiers), 1, 0)) %>%
+  mutate(from_corner = if_else(grepl("FromCorner", qualifiers), 1, 0)) %>%
+  mutate(from_fk = if_else(grepl("SetPiece", qualifiers), 1, 0)) %>%
+  mutate(direct_fk = if_else(grepl("DirectFreekick", qualifiers), 1, 0)) %>%
+  mutate(penalty = if_else(grepl("Penalty", qualifiers), 1, 0)) %>%
+  mutate(assisted = if_else(grepl("Assisted", qualifiers), 1, 0)) %>%
+  mutate(intentional_assist = if_else(grepl("IntentionalAssist", qualifiers), 1, 0)) %>%
+  mutate(fast_break = if_else(grepl("FastBreak", qualifiers), 1, 0)) %>%
+  ungroup() %>%
+  select(-qualifiers) %>%
+  filter(header == 0 & from_corner == 0 & from_fk == 0 & direct_fk == 0 & penalty == 0)
+```
+
+```{r Open-Play Enrich Data, echo=FALSE}
+distance <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+  
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- abs(50 - y_pos)*y_meters/100
+  
+  distance <- sqrt(x_shift*x_shift + y_shift*y_shift)
+}
+
+goal_angle <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- (50 - y_pos)*y_meters/100
+  
+  angle <- atan((7.32*x_shift)/(x_shift*x_shift + y_shift*y_shift - (7.32/2)*(7.32/2)))
+  angle <- ifelse(angle < 0, angle + pi, angle)
+  
+  angle_degrees <- angle*180/pi
+}
+
+shots_ext <- shots_ext %>%
+  rowwise() %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) %>% # angle based on available goal mouth
+  ungroup()
+```
+
+```{r Open-Play Prepare Data for Model, echo=FALSE}
+shots_ext$is_goal <- factor(shots_ext$is_goal, levels = c("1", "0"))
+
+set.seed(seed = 1972) 
+
+train_test_split <- initial_split(data = shots_ext, prop = 0.80) 
+
+train_data <- train_test_split %>% training() 
+test_data  <- train_test_split %>% testing()
+
+xg_recipe <- 
+  recipe(is_goal ~ distance + angle + location_x + location_y, data = train_data) %>% 
+  update_role(location_x, location_y, new_role = "ID") 
+```
+
+```{r Open-Play Define Model Workflow, echo=FALSE}
+model <- logistic_reg() %>% 
+  set_engine("glm")
+
+xg_wflow <- 
+  workflow() %>% 
+  add_model(model) %>% 
+  add_recipe(xg_recipe)
+```
+
+```{r Open-Play Fit Model and Evaluate Fit, echo=FALSE}
+xg_fit <- 
+  xg_wflow %>% 
+  fit(data = train_data)
+```
+
+```{r Open-Play Produce Artificial Data for Plotting, echo=FALSE}
+artificial_shots <- crossing(location_x = seq(50, 100, by = 0.5), location_y = seq(0, 100, by = 0.5)) %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) # angle based on available goal mouth
+
+data_to_plot <- predict(xg_fit, artificial_shots, type = "prob") %>% 
+  bind_cols(artificial_shots) %>%
+  rename("xG" = ".pred_1")
+```
+
+```{r Open-Play Plot, echo=FALSE}
+open_play_pitch <- create_opta_ShotMap(grass_colour = "grey15", line_colour = "#8F8F8F", background_colour = "grey10", goal_colour = "#000000") +
+  geom_tile(data = data_to_plot, aes(x = location_y, y = location_x, fill = xG), alpha = 0.8) +
+  annotate("text", x = 50, y = 70, color = "grey90", label = "Open Play") +
+  scale_fill_gradientn(values = c(0, 1),
+                       colours = c("grey15", "#440154FF", "#440154FF", "#3B528BFF", "#3B528BFF", "#21908CFF", "#21908CFF", "#5DC863FF", "#5DC863FF", "#FDE725FF", "#FDE725FF")) +
+  theme(legend.position = c(.5,.2),
+        legend.background = element_rect(fill = "grey15"),
+        legend.direction = "horizontal",
+        legend.text = element_text(color = "grey90", size = 8, family = "mono"),
+        legend.title = element_text(color = "grey90", size = 14, family = "mono", vjust = 0.8))
+```
+
+```{r Header Data, echo=FALSE}
+shots_ext <- shots %>%
+  mutate(isGoal = as.numeric(isGoal)) %>%
+  mutate(isGoal = if_else(is.na(isGoal), 0, isGoal)) %>%
+  rename(is_goal = isGoal) %>%
+  select(location_x, location_y, is_goal, qualifiers) %>%
+  filter(location_x > 50) %>%
+  rowwise() %>%
+  mutate(big_chance = if_else(grepl("BigChance", qualifiers), 1, 0)) %>%
+  mutate(header = if_else(grepl("Head", qualifiers), 1, 0)) %>%
+  mutate(from_corner = if_else(grepl("FromCorner", qualifiers), 1, 0)) %>%
+  mutate(from_fk = if_else(grepl("SetPiece", qualifiers), 1, 0)) %>%
+  mutate(direct_fk = if_else(grepl("DirectFreekick", qualifiers), 1, 0)) %>%
+  mutate(penalty = if_else(grepl("Penalty", qualifiers), 1, 0)) %>%
+  mutate(assisted = if_else(grepl("Assisted", qualifiers), 1, 0)) %>%
+  mutate(intentional_assist = if_else(grepl("IntentionalAssist", qualifiers), 1, 0)) %>%
+  mutate(fast_break = if_else(grepl("FastBreak", qualifiers), 1, 0)) %>%
+  ungroup() %>%
+  select(-qualifiers) %>%
+  filter(header == 1)
+```
+
+```{r Header Enrich Data, echo=FALSE}
+distance <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+  
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- abs(50 - y_pos)*y_meters/100
+  
+  distance <- sqrt(x_shift*x_shift + y_shift*y_shift)
+}
+
+goal_angle <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- (50 - y_pos)*y_meters/100
+  
+  angle <- atan((7.32*x_shift)/(x_shift*x_shift + y_shift*y_shift - (7.32/2)*(7.32/2)))
+  angle <- ifelse(angle < 0, angle + pi, angle)
+  
+  angle_degrees <- angle*180/pi
+}
+
+shots_ext <- shots_ext %>%
+  rowwise() %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) %>% # angle based on available goal mouth
+  ungroup()
+```
+
+```{r Header Prepare Data for Model, echo=FALSE}
+shots_ext$is_goal <- factor(shots_ext$is_goal, levels = c("1", "0"))
+
+set.seed(seed = 1972) 
+
+train_test_split <- initial_split(data = shots_ext, prop = 0.80) 
+
+train_data <- train_test_split %>% training() 
+test_data  <- train_test_split %>% testing()
+
+xg_recipe <- 
+  recipe(is_goal ~ distance + angle + location_x + location_y, data = train_data) %>% 
+  update_role(location_x, location_y, new_role = "ID") 
+```
+
+```{r Header Define Model Workflow, echo=FALSE}
+model <- logistic_reg() %>% 
+  set_engine("glm")
+
+xg_wflow <- 
+  workflow() %>% 
+  add_model(model) %>% 
+  add_recipe(xg_recipe)
+```
+
+```{r Header Fit Model and Evaluate Fit, echo=FALSE}
+xg_fit <- 
+  xg_wflow %>% 
+  fit(data = train_data)
+```
+
+```{r HeaderProduce Artificial Data for Plotting, echo=FALSE}
+artificial_shots <- crossing(location_x = seq(50, 100, by = 0.5), location_y = seq(0, 100, by = 0.5)) %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) # angle based on available goal mouth
+
+data_to_plot <- predict(xg_fit, artificial_shots, type = "prob") %>% 
+  bind_cols(artificial_shots) %>%
+  rename("xG" = ".pred_1")
+```
+
+```{r Header Plot, echo=FALSE}
+header_pitch <- create_opta_ShotMap(grass_colour = "grey15", line_colour = "#8F8F8F", background_colour = "grey10", goal_colour = "#000000") +
+  geom_tile(data = data_to_plot, aes(x = location_y, y = location_x, fill = xG), alpha = 0.8) +
+  annotate("text", x = 50, y = 70, color = "grey90", label = "Headers") +
+  scale_fill_gradientn(values = c(0, 1),
+                       colours = c("grey15", "#440154FF", "#440154FF", "#3B528BFF", "#3B528BFF", "#21908CFF", "#21908CFF", "#5DC863FF", "#5DC863FF", "#FDE725FF", "#FDE725FF")) +
+  theme(legend.position = c(.5,.2),
+        legend.background = element_rect(fill = "grey15"),
+        legend.direction = "horizontal",
+        legend.text = element_text(color = "grey90", size = 8, family = "mono"),
+        legend.title = element_text(color = "grey90", size = 14, family = "mono", vjust = 0.8))
+```
+
+```{r Corner Data, echo=FALSE}
+shots_ext <- shots %>%
+  mutate(isGoal = as.numeric(isGoal)) %>%
+  mutate(isGoal = if_else(is.na(isGoal), 0, isGoal)) %>%
+  rename(is_goal = isGoal) %>%
+  select(location_x, location_y, is_goal, qualifiers) %>%
+  filter(location_x > 50) %>%
+  rowwise() %>%
+  mutate(big_chance = if_else(grepl("BigChance", qualifiers), 1, 0)) %>%
+  mutate(header = if_else(grepl("Head", qualifiers), 1, 0)) %>%
+  mutate(from_corner = if_else(grepl("FromCorner", qualifiers), 1, 0)) %>%
+  mutate(from_fk = if_else(grepl("SetPiece", qualifiers), 1, 0)) %>%
+  mutate(direct_fk = if_else(grepl("DirectFreekick", qualifiers), 1, 0)) %>%
+  mutate(penalty = if_else(grepl("Penalty", qualifiers), 1, 0)) %>%
+  mutate(assisted = if_else(grepl("Assisted", qualifiers), 1, 0)) %>%
+  mutate(intentional_assist = if_else(grepl("IntentionalAssist", qualifiers), 1, 0)) %>%
+  mutate(fast_break = if_else(grepl("FastBreak", qualifiers), 1, 0)) %>%
+  ungroup() %>%
+  select(-qualifiers) %>%
+  filter(from_corner == 1)
+```
+
+```{r Corner Enrich Data, echo=FALSE}
+distance <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+  
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- abs(50 - y_pos)*y_meters/100
+  
+  distance <- sqrt(x_shift*x_shift + y_shift*y_shift)
+}
+
+goal_angle <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- (50 - y_pos)*y_meters/100
+  
+  angle <- atan((7.32*x_shift)/(x_shift*x_shift + y_shift*y_shift - (7.32/2)*(7.32/2)))
+  angle <- ifelse(angle < 0, angle + pi, angle)
+  
+  angle_degrees <- angle*180/pi
+}
+
+shots_ext <- shots_ext %>%
+  rowwise() %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) %>% # angle based on available goal mouth
+  ungroup()
+```
+
+```{r Corner Prepare Data for Model, echo=FALSE}
+shots_ext$is_goal <- factor(shots_ext$is_goal, levels = c("1", "0"))
+
+set.seed(seed = 1972) 
+
+train_test_split <- initial_split(data = shots_ext, prop = 0.80) 
+
+train_data <- train_test_split %>% training() 
+test_data  <- train_test_split %>% testing()
+
+xg_recipe <- 
+  recipe(is_goal ~ distance + angle + location_x + location_y, data = train_data) %>% 
+  update_role(location_x, location_y, new_role = "ID") 
+```
+
+```{r Corner Define Model Workflow, echo=FALSE}
+model <- logistic_reg() %>% 
+  set_engine("glm")
+
+xg_wflow <- 
+  workflow() %>% 
+  add_model(model) %>% 
+  add_recipe(xg_recipe)
+```
+
+```{r Corner Fit Model and Evaluate Fit, echo=FALSE}
+xg_fit <- 
+  xg_wflow %>% 
+  fit(data = train_data)
+```
+
+```{r Corner Produce Artificial Data for Plotting, echo=FALSE}
+artificial_shots <- crossing(location_x = seq(50, 100, by = 0.5), location_y = seq(0, 100, by = 0.5)) %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) # angle based on available goal mouth
+
+data_to_plot <- predict(xg_fit, artificial_shots, type = "prob") %>% 
+  bind_cols(artificial_shots) %>%
+  rename("xG" = ".pred_1")
+```
+
+```{r Corner Plot, echo=FALSE}
+corner_pitch <- create_opta_ShotMap(grass_colour = "grey15", line_colour = "#8F8F8F", background_colour = "grey10", goal_colour = "#000000") +
+  geom_tile(data = data_to_plot, aes(x = location_y, y = location_x, fill = xG), alpha = 0.8) +
+  annotate("text", x = 50, y = 70, color = "grey90", label = "Corners") +
+  scale_fill_gradientn(values = c(0, 1),
+                       colours = c("grey15", "#440154FF", "#440154FF", "#3B528BFF", "#3B528BFF", "#21908CFF", "#21908CFF", "#5DC863FF", "#5DC863FF", "#FDE725FF", "#FDE725FF")) +
+  theme(legend.position = c(.5,.2),
+        legend.background = element_rect(fill = "grey15"),
+        legend.direction = "horizontal",
+        legend.text = element_text(color = "grey90", size = 8, family = "mono"),
+        legend.title = element_text(color = "grey90", size = 14, family = "mono", vjust = 0.8))
+```
+
+```{r FB Data, echo=FALSE}
+shots_ext <- shots %>%
+  mutate(isGoal = as.numeric(isGoal)) %>%
+  mutate(isGoal = if_else(is.na(isGoal), 0, isGoal)) %>%
+  rename(is_goal = isGoal) %>%
+  select(location_x, location_y, is_goal, qualifiers) %>%
+  filter(location_x > 50) %>%
+  rowwise() %>%
+  mutate(big_chance = if_else(grepl("BigChance", qualifiers), 1, 0)) %>%
+  mutate(header = if_else(grepl("Head", qualifiers), 1, 0)) %>%
+  mutate(from_corner = if_else(grepl("FromCorner", qualifiers), 1, 0)) %>%
+  mutate(from_fk = if_else(grepl("SetPiece", qualifiers), 1, 0)) %>%
+  mutate(direct_fk = if_else(grepl("DirectFreekick", qualifiers), 1, 0)) %>%
+  mutate(penalty = if_else(grepl("Penalty", qualifiers), 1, 0)) %>%
+  mutate(assisted = if_else(grepl("Assisted", qualifiers), 1, 0)) %>%
+  mutate(intentional_assist = if_else(grepl("IntentionalAssist", qualifiers), 1, 0)) %>%
+  mutate(fast_break = if_else(grepl("FastBreak", qualifiers), 1, 0)) %>%
+  ungroup() %>%
+  select(-qualifiers) %>%
+  filter(fast_break == 1)
+```
+
+```{r FB Enrich Data, echo=FALSE}
+distance <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+  
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- abs(50 - y_pos)*y_meters/100
+  
+  distance <- sqrt(x_shift*x_shift + y_shift*y_shift)
+}
+
+goal_angle <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- (50 - y_pos)*y_meters/100
+  
+  angle <- atan((7.32*x_shift)/(x_shift*x_shift + y_shift*y_shift - (7.32/2)*(7.32/2)))
+  angle <- ifelse(angle < 0, angle + pi, angle)
+  
+  angle_degrees <- angle*180/pi
+}
+
+shots_ext <- shots_ext %>%
+  rowwise() %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) %>% # angle based on available goal mouth
+  ungroup()
+```
+
+```{r FB Prepare Data for Model, echo=FALSE}
+shots_ext$is_goal <- factor(shots_ext$is_goal, levels = c("1", "0"))
+
+set.seed(seed = 1972) 
+
+train_test_split <- initial_split(data = shots_ext, prop = 0.80) 
+
+train_data <- train_test_split %>% training() 
+test_data  <- train_test_split %>% testing()
+
+xg_recipe <- 
+  recipe(is_goal ~ distance + angle + location_x + location_y, data = train_data) %>% 
+  update_role(location_x, location_y, new_role = "ID") 
+```
+
+```{r FB Define Model Workflow, echo=FALSE}
+model <- logistic_reg() %>% 
+  set_engine("glm")
+
+xg_wflow <- 
+  workflow() %>% 
+  add_model(model) %>% 
+  add_recipe(xg_recipe)
+```
+
+```{r FB Fit Model and Evaluate Fit, echo=FALSE}
+xg_fit <- 
+  xg_wflow %>% 
+  fit(data = train_data)
+```
+
+```{r FB Produce Artificial Data for Plotting, echo=FALSE}
+artificial_shots <- crossing(location_x = seq(50, 100, by = 0.5), location_y = seq(0, 100, by = 0.5)) %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) # angle based on available goal mouth
+
+data_to_plot <- predict(xg_fit, artificial_shots, type = "prob") %>% 
+  bind_cols(artificial_shots) %>%
+  rename("xG" = ".pred_1")
+```
+
+```{r FB Plot, echo=FALSE}
+fb_pitch <- create_opta_ShotMap(grass_colour = "grey15", line_colour = "#8F8F8F", background_colour = "grey10", goal_colour = "#000000") +
+  geom_tile(data = data_to_plot, aes(x = location_y, y = location_x, fill = xG), alpha = 0.8) +
+  annotate("text", x = 50, y = 70, color = "grey90", label = "Fast Breaks") +
+  scale_fill_gradientn(values = c(0, 1),
+                       colours = c("grey15", "#440154FF", "#440154FF", "#3B528BFF", "#3B528BFF", "#21908CFF", "#21908CFF", "#5DC863FF", "#5DC863FF", "#FDE725FF", "#FDE725FF")) +
+  theme(legend.position = c(.5,.2),
+        legend.background = element_rect(fill = "grey15"),
+        legend.direction = "horizontal",
+        legend.text = element_text(color = "grey90", size = 8, family = "mono"),
+        legend.title = element_text(color = "grey90", size = 14, family = "mono", vjust = 0.8))
+```
+
+```{r Combine pitch plots}
+(open_play_pitch + header_pitch) / (corner_pitch + fb_pitch)
+```
+
+```{r Regression Data, echo=FALSE}
+shots_ext <- shots %>%
+  mutate(isGoal = as.numeric(isGoal)) %>%
+  mutate(isGoal = if_else(is.na(isGoal), 0, isGoal)) %>%
+  rename(is_goal = isGoal) %>%
+  select(location_x, location_y, is_goal, qualifiers) %>%
+  filter(location_x > 50) %>%
+  rowwise() %>%
+  mutate(big_chance = if_else(grepl("BigChance", qualifiers), 1, 0)) %>%
+  mutate(header = if_else(grepl("Head", qualifiers), 1, 0)) %>%
+  mutate(from_corner = if_else(grepl("FromCorner", qualifiers), 1, 0)) %>%
+  mutate(from_fk = if_else(grepl("SetPiece", qualifiers), 1, 0)) %>%
+  mutate(direct_fk = if_else(grepl("DirectFreekick", qualifiers), 1, 0)) %>%
+  mutate(penalty = if_else(grepl("Penalty", qualifiers), 1, 0)) %>%
+  mutate(assisted = if_else(grepl("Assisted", qualifiers), 1, 0)) %>%
+  mutate(intentional_assist = if_else(grepl("IntentionalAssist", qualifiers), 1, 0)) %>%
+  mutate(fast_break = if_else(grepl("FastBreak", qualifiers), 1, 0)) %>%
+  ungroup() %>%
+  select(-qualifiers) %>%
+  filter(from_fk == 0 & penalty == 0 & direct_fk == 0)
+```
+
+```{r Enrich Data}
+distance <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+  
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- abs(50 - y_pos)*y_meters/100
+  
+  distance <- sqrt(x_shift*x_shift + y_shift*y_shift)
+}
+
+goal_angle <- function(x_pos, y_pos){
+  x_meters <- 95.4
+  y_meters <- 76.25
+
+  x_shift <- (100 - x_pos)*x_meters/100
+  y_shift <- (50 - y_pos)*y_meters/100
+  
+  angle <- atan((7.32*x_shift)/(x_shift*x_shift + y_shift*y_shift - (7.32/2)*(7.32/2)))
+  angle <- ifelse(angle < 0, angle + pi, angle)
+  
+  angle_degrees <- angle*180/pi
+}
+
+shots_ext <- shots_ext %>%
+  rowwise() %>%
+  mutate(distance = distance(location_x, location_y)) %>% # distance from goal mid-point
+  mutate(angle = goal_angle(location_x, location_y)) %>% # based on available goal mouth
+  ungroup()
+```
+
+```{r Prepare Data for Model}
+shots_ext$is_goal <- factor(shots_ext$is_goal, levels = c("1", "0"))
+
+set.seed(seed = 1972) 
+
+train_test_split <- initial_split(data = shots_ext, prop = 0.80) 
+
+train_data <- train_test_split %>% training() 
+test_data  <- train_test_split %>% testing()
+
+xg_recipe <- 
+  recipe(is_goal ~ distance + angle + header + from_corner + fast_break + location_x + location_y, data = train_data) %>% 
+  update_role(location_x, location_y, new_role = "ID") 
+
+xg_recipe <-
+  recipe(is_goal ~ distance + angle + location_x + location_y, data = train_data) %>%
+  update_role(location_x, location_y, new_role = "ID")
+
+summary(xg_recipe)
+```
+
+```{r Define Model Workflow}
+model <- logistic_reg() %>% 
+  set_engine("glm")
+
+xg_wflow <- 
+  workflow() %>% 
+  add_model(model) %>% 
+  add_recipe(xg_recipe)
+
+xg_wflow
+```
+
+```{r Fit Model and Evaluate Fit}
+xg_fit <- 
+  xg_wflow %>% 
+  fit(data = train_data)
+
+xg_fit %>% 
+  pull_workflow_fit() %>% 
+  tidy()
+```
+
+```{r Accuracy}
+xg_pred <- predict(xg_fit, test_data, type = "prob") %>% 
+  bind_cols(test_data) %>%
+  rename("xG" = ".pred_1") %>%
+  mutate(is_goal_pred = factor(if_else(xG > 0.5, 1, 0), levels = c("1", "0")))
+
+xg_pred %>% 
+  metrics(truth = is_goal, is_goal_pred) %>%
+  select(-.estimator) %>%
+  filter(.metric == "accuracy") 
+
+```
+
+```{r Precision and Recall, eval=TRUE}
+tibble(
+  "precision" = 
+     precision(xg_pred, is_goal, is_goal_pred) %>%
+     select(.estimate),
+  "recall" = 
+     recall(xg_pred, is_goal, is_goal_pred) %>%
+     select(.estimate)
+) %>%
+  unnest(cols = c(precision, recall))
+```
+
+```{r Bias, echo=FALSE}
+group_size <- 100
+
+grouped_prediction_distance <- xg_pred %>%
+  arrange(distance) %>%
+  mutate(group = floor((row_number()-1)/group_size)) %>%
+  mutate(is_goal_num = if_else(is_goal == "1", 1, 0)) %>%
+  group_by(group) %>%
+  summarize(`Avg. Prediction` = mean(xG), `Avg. Outcome` = mean(is_goal_num), `Avg. Distance` = mean(distance), `Avg. Angle` = mean(angle), .groups = 'drop')
+
+bias_distance <- ggplot(grouped_prediction_distance, aes(x = `Avg. Prediction`, y = `Avg. Outcome`, color = `Avg. Distance`)) +
+  geom_abline(intercept = 0, slope = 1) +
+  geom_point() +
+  scale_color_gradientn(colours = rev(c("grey15", "#440154FF", "#440154FF", "#3B528BFF", "#3B528BFF", "#21908CFF", "#21908CFF", "#5DC863FF", "#5DC863FF", "#FDE725FF", "#FDE725FF"))) +
+  lims(x = c(0.0, 1.0), y = c(0.0, 1.0)) +
+  theme_minimal() +
+  theme(legend.position = "top",
+        legend.title = element_text(color = "grey10", size = 14, family = "mono", vjust = 0.8))
+
+grouped_prediction_angle <- xg_pred %>%
+  arrange(angle) %>%
+  mutate(group = floor((row_number()-1)/group_size)) %>%
+  mutate(is_goal_num = if_else(is_goal == "1", 1, 0)) %>%
+  group_by(group) %>%
+  summarize(`Avg. Prediction` = mean(xG), `Avg. Outcome` = mean(is_goal_num), `Avg. Distance` = mean(distance), `Avg. Angle` = mean(angle), .groups = 'drop')
+
+bias_angle <- ggplot(grouped_prediction_angle, aes(x = `Avg. Prediction`, y = `Avg. Outcome`, color = `Avg. Angle`)) +
+  geom_abline(intercept = 0, slope = 1) +
+  geom_point() +
+  scale_color_gradientn(colours = c("grey15", "#440154FF", "#440154FF", "#3B528BFF", "#3B528BFF", "#21908CFF", "#21908CFF", "#5DC863FF", "#5DC863FF", "#FDE725FF", "#FDE725FF")) +
+  lims(x = c(0.0, 1.0), y = c(0.0, 1.0)) +
+  theme_minimal() +
+  theme(legend.position = "top",
+        legend.title = element_text(color = "grey10", size = 14, family = "mono", vjust = 0.8))
+
+bias_distance + bias_angle
+```
+
+```{r ROC Curve, eval=TRUE}
+xg_pred %>% 
+  roc_curve(truth = is_goal, xG) %>% 
+  autoplot()
+```
