@@ -112,25 +112,6 @@ if (!doNotTrack) {
               <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
                   <div class="box-masonry">
                       
-                      
-                      <div class="box-masonry-text">
-                      
-                          <h4><a href="/portfolio/xg-model-improving-our-model-with-additional-features/">xG Model - Improving our Model with Additional Features</a></h4>
-                          <div class="box-masonry-description">
-                            <p>
-                                
-                                  In the first part of this series we constructed a simple expected Goals-model, solely relying on two predictors: the distance and angle from goal for each shot.
-(open_play_pitch + header_pitch) / (corner_pitch + fb_pitch) distance &lt;- function(x_pos, y_pos){ x_meters &lt;- 95.4 y_meters &lt;- 76.25 x_shift &lt;- (100 - x_pos)*x_meters/100 y_shift &lt;- abs(50 - y_pos)*y_meters/100 distance &lt;- sqrt(x_shift*x_shift + y_shift*y_shift) } goal_angle &lt;- function(x_pos, y_pos){ x_meters &lt;- 95.4 y_meters &lt;- 76.
-                                
-                            </p>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          
-              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
-                  <div class="box-masonry">
-                      
                         
                         <a href="/portfolio/xg-model-accuracy-and-goodness-of-fit/" title="" class="box-masonry-image with-hover-overlay with-hover-icon">
                         
@@ -174,25 +155,6 @@ In this post we want to evaluate the quality of this model more formally with ti
                                 
                                   I have recently gone through the Google Machine Learning crash course and was looking for a project to apply these skills to. Coincidentally, it is also not that long ago that tidymodels has gained some traction (at least in my twitter feed) and I am keen to try it out.
 Of course an Expected Goals-model is a great excuse to combine the two items above. It is relatively easy to set up, readers of this blog will not need a lengthy introduction to the thought process behind it and the feature set used to explain the probability of shots leading to goal is very intuitive.
-                                
-                            </p>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          
-              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
-                  <div class="box-masonry">
-                      
-                      
-                      <div class="box-masonry-text">
-                      
-                          <h4><a href="/portfolio/expected-goals-model-applications/">Expected Goals Model - Applications</a></h4>
-                          <div class="box-masonry-description">
-                            <p>
-                                
-                                  xg time line xG Shots Histogram
-library(dbplyr) # database access library(DBI) # database access library(tidyverse) # dataframe manipulation library(tidymodels) # data processing and modeling source(&quot;../data/pitch_plots.r&quot;) # helper function to plot the pitch source(&quot;../data/pitch_plot.r&quot;) # helper function to plot the pitch source(&quot;../data/standardize_coordinates.r&quot;) # helper function to plot the pitch con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;) matches &lt;- tbl(con, &quot;matches&quot;) %&gt;% filter(league %in% c(&quot;Germany&quot;)) %&gt;% filter(season %in% c(&quot;2018/2019&quot;)) %&gt;% collect() DBI::dbDisconnect(con) match_ids &lt;- unique(matches$match_id) con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.
                                 
                             </p>
                           </div>

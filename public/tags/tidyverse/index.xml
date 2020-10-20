@@ -6,20 +6,10 @@
     <description>Recent content in tidyverse on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 30 Aug 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 26 Aug 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/tidyverse/index.xml" rel="self" type="application/rss+xml" />
     
-    
-    <item>
-      <title>xG Model - Improving our Model with Additional Features</title>
-      <link>/portfolio/xg-model-improving-our-model-with-additional-features/</link>
-      <pubDate>Sun, 30 Aug 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/portfolio/xg-model-improving-our-model-with-additional-features/</guid>
-      <description>In the first part of this series we constructed a simple expected Goals-model, solely relying on two predictors: the distance and angle from goal for each shot.
-(open_play_pitch + header_pitch) / (corner_pitch + fb_pitch) distance &amp;lt;- function(x_pos, y_pos){ x_meters &amp;lt;- 95.4 y_meters &amp;lt;- 76.25 x_shift &amp;lt;- (100 - x_pos)*x_meters/100 y_shift &amp;lt;- abs(50 - y_pos)*y_meters/100 distance &amp;lt;- sqrt(x_shift*x_shift + y_shift*y_shift) } goal_angle &amp;lt;- function(x_pos, y_pos){ x_meters &amp;lt;- 95.4 y_meters &amp;lt;- 76.</description>
-    </item>
     
     <item>
       <title>xG Model - Accuracy and Goodness-Of-Fit</title>
@@ -42,16 +32,6 @@ In this post we want to evaluate the quality of this model more formally with ti
       <guid>/portfolio/expected-goals-model-with-tidymodels/</guid>
       <description>I have recently gone through the Google Machine Learning crash course and was looking for a project to apply these skills to. Coincidentally, it is also not that long ago that tidymodels has gained some traction (at least in my twitter feed) and I am keen to try it out.
 Of course an Expected Goals-model is a great excuse to combine the two items above. It is relatively easy to set up, readers of this blog will not need a lengthy introduction to the thought process behind it and the feature set used to explain the probability of shots leading to goal is very intuitive.</description>
-    </item>
-    
-    <item>
-      <title>Expected Goals Model - Applications</title>
-      <link>/portfolio/expected-goals-model-applications/</link>
-      <pubDate>Tue, 04 Aug 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/portfolio/expected-goals-model-applications/</guid>
-      <description>xg time line xG Shots Histogram
-library(dbplyr) # database access library(DBI) # database access library(tidyverse) # dataframe manipulation library(tidymodels) # data processing and modeling source(&amp;quot;../data/pitch_plots.r&amp;quot;) # helper function to plot the pitch source(&amp;quot;../data/pitch_plot.r&amp;quot;) # helper function to plot the pitch source(&amp;quot;../data/standardize_coordinates.r&amp;quot;) # helper function to plot the pitch con &amp;lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &amp;quot;~/Documents/Blog/Data/data.sqlite&amp;quot;) matches &amp;lt;- tbl(con, &amp;quot;matches&amp;quot;) %&amp;gt;% filter(league %in% c(&amp;quot;Germany&amp;quot;)) %&amp;gt;% filter(season %in% c(&amp;quot;2018/2019&amp;quot;)) %&amp;gt;% collect() DBI::dbDisconnect(con) match_ids &amp;lt;- unique(matches$match_id) con &amp;lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &amp;quot;~/Documents/Blog/Data/data.</description>
     </item>
     
   </channel>

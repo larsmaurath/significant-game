@@ -1,4 +1,10 @@
 base
+methods
+datasets
+utils
+grDevices
+graphics
+stats
 dbplyr
 DBI
 tidyverse
@@ -22,3 +28,4 @@ rsample
 tune
 workflows
 yardstick
+patchwork

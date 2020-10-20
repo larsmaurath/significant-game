@@ -139,25 +139,6 @@ We&#39;ll open source soon some tooling to help visualizing the data, computing 
               <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
                   <div class="box-masonry">
                       
-                      
-                      <div class="box-masonry-text">
-                      
-                          <h4><a href="/portfolio/xg-model-improving-our-model-with-additional-features/">xG Model - Improving our Model with Additional Features</a></h4>
-                          <div class="box-masonry-description">
-                            <p>
-                                
-                                  In the first part of this series we constructed a simple expected Goals-model, solely relying on two predictors: the distance and angle from goal for each shot.
-(open_play_pitch + header_pitch) / (corner_pitch + fb_pitch) distance &lt;- function(x_pos, y_pos){ x_meters &lt;- 95.4 y_meters &lt;- 76.25 x_shift &lt;- (100 - x_pos)*x_meters/100 y_shift &lt;- abs(50 - y_pos)*y_meters/100 distance &lt;- sqrt(x_shift*x_shift + y_shift*y_shift) } goal_angle &lt;- function(x_pos, y_pos){ x_meters &lt;- 95.4 y_meters &lt;- 76.
-                                
-                            </p>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          
-              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
-                  <div class="box-masonry">
-                      
                         
                         <a href="/portfolio/xg-model-accuracy-and-goodness-of-fit/" title="" class="box-masonry-image with-hover-overlay with-hover-icon">
                         
@@ -211,43 +192,6 @@ Of course an Expected Goals-model is a great excuse to combine the two items abo
               <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
                   <div class="box-masonry">
                       
-                      
-                      <div class="box-masonry-text">
-                      
-                          <h4><a href="/portfolio/expected-goals-model-applications/">Expected Goals Model - Applications</a></h4>
-                          <div class="box-masonry-description">
-                            <p>
-                                
-                                  xg time line xG Shots Histogram
-library(dbplyr) # database access library(DBI) # database access library(tidyverse) # dataframe manipulation library(tidymodels) # data processing and modeling source(&quot;../data/pitch_plots.r&quot;) # helper function to plot the pitch source(&quot;../data/pitch_plot.r&quot;) # helper function to plot the pitch source(&quot;../data/standardize_coordinates.r&quot;) # helper function to plot the pitch con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.sqlite&quot;) matches &lt;- tbl(con, &quot;matches&quot;) %&gt;% filter(league %in% c(&quot;Germany&quot;)) %&gt;% filter(season %in% c(&quot;2018/2019&quot;)) %&gt;% collect() DBI::dbDisconnect(con) match_ids &lt;- unique(matches$match_id) con &lt;- DBI::dbConnect(RSQLite::SQLite(), dbname = &quot;~/Documents/Blog/Data/data.
-                                
-                            </p>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          
-              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
-                  <div class="box-masonry">
-                      
-                      
-                      <div class="box-masonry-text">
-                      
-                          <h4><a href="/portfolio/chipb%C3%A4lle/">Chipbälle</a></h4>
-                          <div class="box-masonry-description">
-                            <p>
-                                
-                                   ## `summarise()` regrouping output by &#39;season&#39; (override with `.groups` argument) ## Warning: Package `magick` is required to draw images. Image not drawn. 
-                                
-                            </p>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          
-              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
-                  <div class="box-masonry">
-                      
                         
                         <a href="/portfolio/incorporate-d3-into-a-r-workflow/" title="" class="box-masonry-image with-hover-overlay with-hover-icon">
                         
@@ -288,24 +232,6 @@ library(dbplyr) # database access library(DBI) # database access library(tidyver
                                   Injury data has been a bit of a guilty pleasure for me recently. When browsing through some of the data from Transfermarkt I looked into different ways of visualizing it. Specifically I was focused on highlighting injury lengths and their distribution over a player’s career.
 Screenshot from transfermarkt.com
  This resulted in the below viz for Marco Reus which is inspired by how I view the (European) football calendar: running counter-clockwise and with the summer break at 6 o’clock.
-                                
-                            </p>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          
-              <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3 masonry-item">
-                  <div class="box-masonry">
-                      
-                      
-                      <div class="box-masonry-text">
-                      
-                          <h4><a href="/portfolio/how-thomas-gr%C3%B8nnemark-changed-liverpools-throw-ins/">How Thomas Grønnemark changed Liverpools Throw-Ins</a></h4>
-                          <div class="box-masonry-description">
-                            <p>
-                                
-                                  A lot has been written about Thomas Grønnemark’s appointment as Liverpool’s throw-in coach. In this post I will try to dig a little bit deeper and consult the numbers to see if I can seperate the myths from the facts and if I can unearth something that hasn’t been written before. I will start with summarizing what I have read so far. As probably many of you I haven’t given throw-ins much thought except for the occasional view on the time they take (mostly too long because my team is behind, the game is always over and the all the ball boys seem to have vanished).
                                 
                             </p>
                           </div>
