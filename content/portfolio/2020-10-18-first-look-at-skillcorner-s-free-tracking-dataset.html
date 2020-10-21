@@ -14,32 +14,36 @@ showonlyimage: no
 
 
 
-<p>A couple of weeks ago another great dataset was made available to the soccer analytics community. In collaboration with Friends-of-Tracking the data provider SkillCorner open-sourced tracking data for nine top5 league matches.</p>
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="First Look at SkillCorner's Open Source Tracking Dataset">
+<meta name="twitter:description" content="A couple of weeks ago another great dataset was made available to the soccer analytics community. In collaboration with Friends-of-Tracking the data provider SkillCorner open-sourced tracking data for nine matches across the Top5 leagues.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/tease.gif">
+<p>A couple of weeks ago another great dataset was made available to the soccer analytics community. In collaboration with Friends-of-Tracking the data provider SkillCorner open-sourced tracking data for nine matches across the Top5 leagues.</p>
 {{% tweet "1314241326926442503" %}}
 <p><br></p>
 <p>SkillCorner’s data is a little different from the usual tracking data in that they are emphasizing broader coverage across as many leagues as possible over 100% accuracy. Their so-called broadcast tracking data is automatically generated from TV footage with no or little postprocessing. Conventional tracking data relies on multiple cameras and is much more expensive to generate, but will ensure that all 22 players are always in the frame.</p>
-<p>One of the downsides of broadcasting footage as a source is that it suffers from noise in the form of replays and close-up zooms. In this post I will try to introduce the format of the data and some ways to work-around the quirks of the data.</p>
-<p>Let’s start with loading the necessary libraries and with sourcing the data from SkillCorner’s GitHub repository. I am also sourcing a custom pitch plotting function from one of my repositories. The format for the start and end time is HH:MM.(1/10th sec)</p>
+<p>One of the downsides of broadcasting footage as a source is therefore that it suffers from noise in the form of replays and close-up zooms. In this post I will try to introduce the format of the data and some ways to work-around its quirks.</p>
+<p>Let’s start with loading the necessary libraries and with sourcing data for the 4:0 win of Bayern Munich against Borussia Dortmund in November 2019 from SkillCorner’s GitHub repository (ID 2417). The time frame from 45:50 to 46:10 covers Serge Gnabry’s 2:0 goal assisted by Thomas Müller.</p>
+<p>I am also sourcing a custom pitch plotting function from one of my repositories. The format for the start and end time is HH:MM.(1/10th sec)</p>
 <pre class="r"><code>library(tidyverse) # Data manipulation
 library(jsonlite) # Loading json files
 library(gganimate) # Animation of plots
 library(gridExtra) # Needed for adding tables to plot
 library(cowplot) # Needed for adding images on plot
-library(magick) # Needed for manipulating images
 
 # This is a simple pitch plotting function that expects data formatted to a 105x86m pitch
 source(&quot;https://raw.githubusercontent.com/larsmaurath/keine-mathematik/master/content/data/pitch_plot.R&quot;)
 
 
 # Start and end time of the frames we want to plot
-
 start_time &lt;- &quot;45:50.0&quot;
 end_time &lt;- &quot;46:10.0&quot;
 half &lt;- 2 # If the times are close to 45min, we need to specify which half we mean
 
 
 # Load meta data and actual tracking data
-
 meta &lt;- fromJSON(&quot;https://raw.githubusercontent.com/SkillCorner/opendata/master/data/matches/2417/match_data.json&quot;)
 
 players &lt;- meta[[&quot;players&quot;]] %&gt;%
@@ -77,7 +81,7 @@ for (i in seq(1, nrow(tracking))) {
     coordinates &lt;- bind_rows(coordinates, frame_df)
 }</code></pre>
 <p><br></p>
-<p>One way to deal with the mentioned gaps in the data is to linearly interpolate the x/y-coordinates. For this we assume that all players and the ball move on the shortest path at constant speed to their new location (i.e. when they reappear once the footage is back live or zoomed out). Of course this assumption can be very wrong, but should be OK for short gaps.</p>
+<p>One way to deal with the mentioned gaps in the data is to linearly interpolate the x/y-coordinates. For this we assume that all players and the ball move on the shortest path at constant speed to their new location (i.e. where they reappear once the footage is back live or zoomed out). Of course this assumption can be very wrong, but should be OK for short gaps.</p>
 <pre class="r"><code># Below code interpolates linearly between locations
 # for periods in which we have missing tracking data
 
@@ -114,7 +118,7 @@ coordinates_int &lt;- coordinates %&gt;%
                                             method = &quot;linear&quot;)$y)) %&gt;%
   ungroup()</code></pre>
 <p><br></p>
-<p>To plot the tracking data in an animation we first want to standardize the coordinates to a 105m x 68m norm to then use our plotting function. gganimate will then take care of the rest. Its function transition time specifies which dataframe column holds the frame transition information. We plot players and ball separately to ensure that the ball is always visible.</p>
+<p>To plot the tracking data in an animation we first want to standardize the coordinates to a 105m x 68m norm to then use our plotting function. <em>gganimate</em> will then take care of the rest. Its function <em>transition_time</em> specifies which dataframe column holds the frame information. We plot players and ball separately to ensure that the ball is always visible (i.e. on top).</p>
 <pre class="r"><code>coordinates_int &lt;- coordinates_int %&gt;%
   left_join(players, by = &quot;trackable_object&quot; ) %&gt;%
   mutate(team_id = ifelse(trackable_object == 55, 0, team_id)) %&gt;%
@@ -125,7 +129,12 @@ coordinates_int &lt;- coordinates %&gt;%
 
 p &lt;- plot_pitch(theme = &quot;dark&quot;) +
   geom_point(data = coordinates_int %&gt;% filter(trackable_object != 55), 
-             aes(x = x, y = y, color = factor(team_id), size = factor(team_id), group = time, alpha = in_broadcast)) +
+             aes(x = x, 
+                 y = y, 
+                 color = factor(team_id), 
+                 size = factor(team_id), 
+                 group = time, 
+                 alpha = in_broadcast)) +
   geom_text(data = coordinates_int, 
             aes(x = x, y = y, label = number, group = time), 
             size = 3, 
@@ -133,7 +142,12 @@ p &lt;- plot_pitch(theme = &quot;dark&quot;) +
             fontface = &quot;bold&quot;, 
             check_overlap = TRUE) + 
   geom_point(data = coordinates_int %&gt;% filter(trackable_object == 55), 
-             aes(x = x, y = y, color = factor(team_id), size = factor(team_id), group = time, alpha = in_broadcast)) +
+             aes(x = x, 
+                 y = y, 
+                 color = factor(team_id), 
+                 size = factor(team_id), 
+                 group = time, 
+                 alpha = in_broadcast)) +
   scale_size_manual(values = c(&quot;100&quot; = 5, &quot;103&quot; = 5, &quot;0&quot; = 2)) +
   scale_colour_manual(values = c(&quot;100&quot; = &quot;#e4070c&quot;, &quot;103&quot; = &quot;#f4e422&quot;, &quot;0&quot; = &quot;white&quot;)) +
   scale_alpha_manual(values = c(&quot;TRUE&quot; = 1, &quot;FALSE&quot; = 0.5)) +
@@ -154,34 +168,38 @@ table_1 &lt;- coordinates_int %&gt;%
   distinct() %&gt;% 
   arrange(number)
 
+table_1 &lt;- tableGrob(t(table_1),
+                    rows = NULL, 
+                    cols = NULL, 
+                    theme = ttheme_minimal(base_colour = &quot;grey90&quot;, 
+                                           base_size = 8, 
+                                           padding = unit(c(2, 2), &quot;mm&quot;))
+                    )
+
 table_2 &lt;- coordinates_int %&gt;% 
   filter(team_id == 100) %&gt;% 
   select(last_name, number) %&gt;% 
   distinct() %&gt;% 
   arrange(number)
 
+table_2 &lt;- tableGrob(t(table_2),
+                    rows = NULL, 
+                    cols = NULL, 
+                    theme = ttheme_minimal(base_colour = &quot;grey90&quot;, 
+                                           base_size = 8, 
+                                           padding = unit(c(2, 2), &quot;mm&quot;))
+                    )
+
 p &lt;- p +
   theme(plot.margin=unit(c(2, 0.5, 2, 0.5),&quot;cm&quot;)) +
   draw_image(dor_img, x = 93, y = 2, width = 10, height = 10) +
   draw_image(bay_img, x = 2, y = 56, width = 10, height = 10) +
-  annotation_custom(tableGrob(t(table_1), 
-                              rows = NULL, 
-                              cols = NULL, 
-                              theme = ttheme_minimal(base_colour = &quot;grey90&quot;, 
-                                                     base_size = 8, 
-                                                     padding = unit(c(2, 2), &quot;mm&quot;))
-                              ), 
+  annotation_custom(table_1, 
                     xmin = 0, 
                     xmax = 105, 
                     ymin = -10, 
                     ymax =  0) +
-  annotation_custom(tableGrob(t(table_2), 
-                              rows = NULL, 
-                              cols = NULL, 
-                              theme = ttheme_minimal(base_colour = &quot;grey90&quot;, 
-                                                     base_size = 8, 
-                                                     padding = unit(c(2, 2), &quot;mm&quot;))
-                              ), 
+  annotation_custom(table_2, 
                     xmin = 0, 
                     xmax = 105, 
                     ymin = 68, 
@@ -190,14 +208,20 @@ p &lt;- p +
 animate(p, nframes = 200, width = 500, height = 460)</code></pre>
 <p><img src="/portfolio/2020-10-18-first-look-at-skillcorner-s-free-tracking-dataset_files/figure-html/Let%20make%20this%20look%20a%20bit%20nicer-1.gif" /><!-- --></p>
 <p>Let’s look at another example that highlights the interpolation step:</p>
-<p><img src="skillcorner_footage.gif" />
-### Ressources</p>
+<p>In the official footage we can see how the camera zooms in right after Pavard receives the ball. For these few seconds SkillCorner does not provide tracking data as there is not much to track. But we can see that our interpolation does a reasonable job and the movements do not look artificial at all.</p>
+<p><img src="skillcorner_footage.gif" /></p>
+<p>I hope this post provides a good starting point to explore this new open-source dataset.</p>
+<div id="ressources" class="section level3">
+<h3>Ressources</h3>
 <style>
 div.blue {background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
 </style>
 <div class="blue">
 <ul>
 <li>SkillCorner <a href="https://www.skillcorner.com/" target="_blank">website</a></li>
-<li>SkillCorner [data repository](<a href="https://github.com/SkillCorner/opendata" class="uri">https://github.com/SkillCorner/opendata</a>}</li>
+<li>SkillCorner <a href="https://github.com/SkillCorner/opendata" target="_blank">data repository</a></li>
+<li>Download <a href="https://raw.githubusercontent.com/larsmaurath/significant-game/master/content/portfolio/2020-10-18-first-look-at-skillcorner-s-free-tracking-dataset.Rmd" target="_blank">code</a> for this post</li>
+<li>To not miss any of my future posts, follow me on <a href="%7Btarget=%22_blank%22%7D" target="_blank">Twitter</a></li>
 </ul>
+</div>
 </div>
