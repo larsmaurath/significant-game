@@ -254,6 +254,6 @@ div.blue {background-color:#e6f0ff; border-radius: 5px; padding: 20px;}
 - SkillCorner [website](https://www.skillcorner.com/){target="_blank"}
 - SkillCorner [data repository](https://github.com/SkillCorner/opendata){target="_blank"}
 - Download [code](https://raw.githubusercontent.com/larsmaurath/significant-game/master/content/portfolio/2020-10-18-first-look-at-skillcorner-s-free-tracking-dataset.Rmd){target="_blank"} for this post
-- To not miss any of my future posts, follow me on [Twitter]({target="_blank"}){target="_blank"}
+- To not miss any of my future posts, follow me on [Twitter](https://twitter.com/thesignigame){target="_blank"}
 
 </div>
