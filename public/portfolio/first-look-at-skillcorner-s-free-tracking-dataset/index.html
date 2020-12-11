@@ -17,6 +17,16 @@
   <link href="/css/style.green.css" rel="stylesheet" id="theme-stylesheet">
   <script src="/js/highlight.pack.js"></script> 
   <script>hljs.initHighlightingOnLoad();</script> 
+  <script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+    }
+  });
+  </script>
+  <script async type="text/javascript"
+    src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+  </script>
 
  
 
@@ -123,7 +133,7 @@ if (!doNotTrack) {
 
 <p><br></p>
 <p>SkillCorner’s data is a little different from the usual tracking data in that they are emphasizing broader coverage across as many leagues as possible over 100% accuracy. Their so-called broadcast tracking data is automatically generated from TV footage with no or little postprocessing. Conventional tracking data relies on multiple cameras and is much more expensive to generate, but will ensure that all 22 players are always in the frame.</p>
-<p>One of the downsides of broadcasting footage as a source is therefore that it suffers from noise in the form of replays and close-up zooms. In this post I will try to introduce the format of the data and some ways to work-around its quirks.</p>
+<p>One of the downsides of broadcasting footage as a source is therefore that it suffers from noise in the form of replays and close-up zooms. In this post I will try to introduce the format of the data and some ways to work around its quirks.</p>
 <p>Let’s start with loading the necessary libraries and with sourcing data for the 4:0 win of Bayern Munich against Borussia Dortmund in November 2019 from SkillCorner’s GitHub repository (ID 2417). The time frame from 45:50 to 46:10 covers Serge Gnabry’s 2:0 goal assisted by Thomas Müller.</p>
 <p>I am also sourcing a custom pitch plotting function from one of my repositories. The format for the start and end time is HH:MM.(1/10th sec)</p>
 <pre class="r"><code>library(tidyverse) # Data manipulation
@@ -217,7 +227,7 @@ coordinates_int &lt;- coordinates %&gt;%
                                             method = &quot;linear&quot;)$y)) %&gt;%
   ungroup()</code></pre>
 <p><br></p>
-<p>To plot the tracking data in an animation we first want to standardize the coordinates to a 105m x 68m norm to then use our plotting function. <em>gganimate</em> will then take care of the rest. Its function <em>transition_time</em> specifies which dataframe column holds the frame information. We plot players and ball separately to ensure that the ball is always visible (i.e. on top).</p>
+<p>To plot the tracking data in an animation we first want to standardize the coordinates to a 105m x 68m norm to then use our plotting function. <strong>gganimate</strong> will then take care of the rest. Its function <strong>transition_time</strong> specifies which dataframe column holds the frame information. We plot players and ball separately to ensure that the ball is always visible (i.e. on top).</p>
 <pre class="r"><code>coordinates_int &lt;- coordinates_int %&gt;%
   left_join(players, by = &quot;trackable_object&quot; ) %&gt;%
   mutate(team_id = ifelse(trackable_object == 55, 0, team_id)) %&gt;%

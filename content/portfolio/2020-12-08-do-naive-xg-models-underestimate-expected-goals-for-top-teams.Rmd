@@ -1,0 +1,512 @@
+---
+title: Do Naive xG Models underestimate Expected Goals for Top Teams?
+author: Lars Maurath
+date: '2020-12-08'
+slug: do-naive-xg-models-underestimate-expected-goals-for-top-teams
+categories: []
+tags: []
+image: ''
+showonlyimage: no
+---
+## Motivation
+
+After [documenting](https://www.thesignificantgame.com/portfolio/expected-goals-model-with-tidymodels/){target="_blank"} the implementation of a simple xG model I have spent quite a bit of time thinking about what makes a good model and how you could go about quantifying its quality.
+
+
+A few weeks ago [Tom Worville](https://twitter.com/Worville){target="_blank"} posted the below chart which sparked a bit of a discussion around the relationship between high shooting output and overperformance of xG.
+
+```{r echo=FALSE}
+blogdown::shortcode('tweet', '1332344663605456896')
+```
+
+My intuition for this phenomenon is that high shooting output is a proxy for the quality of a team and that *naive* xG models underestimate the xG values for top teams. Given that xG models are by construction unbiased over all teams this also means that they should overestimate xG for poor teams.
+
+In this post I am trying to find evidence for my intuition
+
+## What deviation between goals and xG is abnormal?
+
+Let's first start with the question of how much variation we should expect between cumulative goals and xG. 
+
+Even if we assume that we have a perfect xG model with no estimation error (i.e. the model captures all relevant and repeatable information that influences shot outcome) there will always be residual variance: A shot with true xG of for example 0.5 can only either result in a goal or not. I.e. a Bernoulli distributed random variable with parameter equal to xG can only take values of 1 (goal) or 0 (non-goal).
+
+In contrast to Tom I won't look at individual players but at xG values for entire teams. That has the advantages of having larger sample sizes, data is easier to come by and we can hopefully answer our initial question of potential bias by team.
+
+Below I am simulating cumulative goal paths generated from the same sequence of cumulative expected goals. Cumulative xG is sampled from a typical xG distribution like the below
+
+```{r Load Libraries, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse) # dataframe manipulation
+library(dbplyr) # database access
+library(DBI) # database access
+library(r2d3) # evaluate D3 directly from R
+library(viridis) # color scheme for pass polar
+library(cowplot) # plotting the player portrait
+library(broom) # getting kmeans results
+library(patchwork) # combining plots
+library(ggrepel) # pretty labels for scatter plot
+library(r2d3) # d3 support
+library(gganimate) # Animation
+library(magick)
+library(glue)
+library(ggtext)
+library(scales)
+library(DT)
+library(widgetframe)
+```
+
+```{r xG Function, echo=FALSE, message=FALSE, warning=FALSE}
+compute_xg <- function(location_x, location_y, header, from_corner, from_fk, direct_fk, fast_break, penalty){
+  
+  distance_func <- function(x_pos, y_pos){
+    x_meters <- 95.4
+    y_meters <- 76.25
+    
+    x_shift <- (100 - x_pos)*x_meters/100
+    y_shift <- abs(50 - y_pos)*y_meters/100
+    
+    distance <- sqrt(x_shift*x_shift + y_shift*y_shift)
+  }
+  
+  goal_angle_func <- function(x_pos, y_pos){
+    x_meters <- 95.4
+    y_meters <- 76.25
+    
+    x_shift <- (100 - x_pos)*x_meters/100
+    y_shift <- (50 - y_pos)*y_meters/100
+    
+    angle <- atan((7.32*x_shift)/(x_shift*x_shift + y_shift*y_shift - (7.32/2)*(7.32/2)))
+    angle <- ifelse(angle < 0, angle + pi, angle)
+    
+    angle_degrees <- angle*180/pi
+  }
+  
+  if(penalty == 1){
+    return(0.75)
+  }
+  
+  distance <- distance_func(location_x, location_y)
+  angle <- goal_angle_func(location_x, location_y)
+  
+  xg <- 1 / (1 + exp(0.74 + 0.13*distance - 0.02*angle + 0.92*header + 0.75*from_corner + 0.29*from_fk - 0.95*direct_fk - 0.93*fast_break))
+}
+```
+
+```{r Load All Shots For A Given Season, echo=FALSE}
+con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "~/Documents/Blog/Data/data.sqlite")
+
+matches <- tbl(con, "matches") %>%
+  filter(league == "Germany") %>%
+  filter(season %in% c("2017/2018", "2018/2019", "2019/2020")) %>%
+  collect()
+
+match_ids <- unique(matches$match_id)
+
+shots <- tbl(con, "events") %>%
+  filter(match_id %in% match_ids) %>%
+  filter(teamId %in% c(37)) %>%
+  filter(isShot == 1) %>%
+  collect()
+
+DBI::dbDisconnect(con)
+
+shots <- shots %>%
+  rowwise() %>%
+  mutate(header = if_else(grepl("Head", qualifiers), 1, 0)) %>%
+  mutate(from_corner = if_else(grepl("FromCorner", qualifiers), 1, 0)) %>%
+  mutate(from_fk = if_else(grepl("SetPiece", qualifiers), 1, 0)) %>%
+  mutate(direct_fk = if_else(grepl("DirectFreekick", qualifiers), 1, 0)) %>%
+  mutate(penalty = if_else(grepl("Penalty", qualifiers), 1, 0)) %>%
+  mutate(fast_break = if_else(grepl("FastBreak", qualifiers), 1, 0)) %>%
+  mutate(isGoal = ifelse(isGoal == "1", 1, 0)) %>%
+  filter(direct_fk == 0) %>%
+  filter(penalty == 0) %>%
+  mutate(xg = compute_xg(location_x, location_y, header, from_corner, from_fk, direct_fk, fast_break, penalty)) %>%
+  ungroup()
+```
+
+```{r Typical xG distribution, echo=FALSE}
+ggplot(shots %>% filter(teamId == 37), aes(xg, ..scaled..)) +
+  geom_density() + 
+  theme_minimal()
+```
+
+On the x-axis I show the number of shots from 5 to 1000, on the y-axis cumulative xG/goals. Possible cumulative goal paths are are shown in grey around the red cumulative xG path. The second chart shows the one-sided, relative variation of the 95% confidence interval around cumulative xG.
+
+```{r Animated simulation, echo=FALSE}
+set.seed(5)
+
+df_list <- list()
+
+xg_sample <- as.data.frame(sample(shots$xg, 1000, replace = TRUE))
+colnames(xg_sample) <- c("xg")
+
+for(i in 1:100){
+
+  xg_sample <- xg_sample %>%
+    rowwise() %>%
+    mutate(goals = rbinom(1, 1, xg)) %>%
+    ungroup()
+
+  xg_sample$cum_xg <- cumsum(xg_sample$xg)
+  xg_sample$cum_goals <- cumsum(xg_sample$goals) 
+    
+  names(xg_sample)[names(xg_sample) == "cum_goals"] <- paste0("sim_", as.character(i))
+
+}
+
+xg_sample_for_plot <- xg_sample %>%
+  mutate(shots = row_number()) %>%
+  rowwise() %>%
+  mutate(max_quant = (quantile(c_across(starts_with("sim")), probs = c(0.975)) - cum_xg) / cum_xg) %>%
+  mutate(min_quant = (cum_xg - quantile(c_across(starts_with("sim")), probs = c(0.025))) / cum_xg) %>%
+  mutate(min_max = max(max_quant, min_quant)) %>%
+  select(-c("goals", "xg"))
+
+xg_sample_for_plot <- xg_sample_for_plot %>%
+  mutate(show_time = case_when(shots %in% c(118, 225, 450, 900) ~ 30, TRUE ~ 1)) %>%
+  uncount(show_time) %>%
+  mutate(reveal_time = row_number()) %>%
+  pivot_longer(-c("shots", "reveal_time"), values_to = "goals") %>%
+  filter(shots >= 5)
+
+xg_sample_for_plot <- xg_sample_for_plot %>%
+  mutate(
+    text = case_when(
+      shots < 118 ~ "With a small sample size variance dominates the actual goal tally",
+      shots >= 118 & shots < 225 ~ "After 10 games actual goals vary +/- 50% around expected goals",
+      shots >= 225 & shots < 450 ~ "After half a season actual goals vary +/- 33% around expected goals -\ncumulative xG of 30 can reasonably lead to 20 - 40 goals",
+      shots >= 450 & shots < 900 ~ "After a full season actual goals vary +/- 20% around cumulative xG -\ncumulative xG of 50 can reasonably lead to 40 - 60 goals",
+      shots >= 900               ~ "After two full seasons actual goals vary +/- 15% around expected goals -\ncumulative xG of 100 can reasonably lead to 85 - 115 goals",
+      TRUE                       ~ ""
+    )
+  )
+
+a <- ggplot() +
+  geom_line(data = xg_sample_for_plot %>% filter(str_detect(name, "^sim")), aes(x = shots, y = goals), color = "grey", size = 0.5) +
+  geom_line(data = xg_sample_for_plot %>% filter(name == "cum_xg"), aes(x = shots, y = goals), color = "tomato2") +
+  scale_x_continuous(limits = c(0, NA)) +
+  geom_vline(xintercept = 118, linetype = "dashed") +
+  geom_vline(xintercept = 225, linetype = "dashed") +
+  geom_vline(xintercept = 450, linetype = "dashed") +
+  geom_vline(xintercept = 900, linetype = "dashed") +
+  transition_reveal(reveal_time) +
+  view_follow(fixed_x = TRUE) +
+  labs(title = glue::glue("<b>Simulation of Residual Variance of a (Hypothetical) Perfect</b> <b style = 'color:tomato2'>xG Model</b>"), 
+       subtitle = "Goals are modeled as Bernoulli RVs Parameterized with xG values from a 'typical' xG Distribution") +
+  ylab("goals/xG") +
+  theme_bw() +
+  theme(legend.position = "none", 
+        axis.title.x = element_blank(), 
+        axis.text.y = element_text(margin = margin(t = 0, r = 0, b = 0, l = 6)), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        plot.title = element_markdown(size = 9),
+        plot.subtitle = element_text(size = 8)) 
+
+b <- ggplot(xg_sample_for_plot %>% filter(name %in% c("min_max")) %>% pivot_wider(names_from = name, values_from = goals), aes(x = shots)) +
+  geom_line(aes(y = min_max)) + 
+  scale_x_continuous(limits = c(5, 1000)) +
+  scale_y_continuous(labels = scales::percent) +
+  geom_vline(xintercept = 118, linetype = "dashed") +
+  annotate("text", x = 118-20, y = 0.8, colour = "black", size = 3, label = "10 Games", angle = 90, hjust = 0) +
+  geom_vline(xintercept = 225, linetype = "dashed") +
+  annotate("text", x = 225-20, y = 0.8, colour = "black", size = 3, label = "Half Season", angle = 90, hjust = 0) +
+  geom_vline(xintercept = 450, linetype = "dashed") +
+  annotate("text", x = 450-20, y = 0.8, colour = "black", size = 3, label = "Full Season", angle = 90, hjust = 0) +
+  geom_vline(xintercept = 900, linetype = "dashed") +
+  annotate("text", x = 900-20, y = 0.8, colour = "black", size = 3, label = "Two Seasons", angle = 90, hjust = 0) +
+  transition_reveal(reveal_time) +
+  view_follow(fixed_x = TRUE, fixed_y = TRUE) +
+  labs(title = glue::glue("<b>Relative, one-sided error (95% confidence interval) drops with increasing sample size</b>"), 
+       #subtitle = "After 10 Games actual goals may vary +/- 50% around expected goals") +
+       subtitle = '{xg_sample_for_plot$text[as.integer(frame_along)*100]}') +
+  xlab("shots") +
+  theme_bw() +
+  theme(legend.position = "none", 
+        axis.title.y = element_blank(), 
+        plot.title = element_markdown(size = 9),
+        plot.subtitle = element_text(size = 8)) 
+
+a_gif <- animate(a, nframes = 300, width = 600, height = 150, end_pause = 10)
+b_gif <- animate(b, nframes = 300, width = 600, height = 150, end_pause = 10)
+
+anim_save("~/Documents/a.gif", animation = a_gif)
+anim_save("~/Documents/b.gif", animation = b_gif)
+
+a_mgif <- image_read("~/Documents/a.gif")
+b_mgif <- image_read("~/Documents/b.gif")
+
+new_gif <- image_append(c(a_mgif[2], b_mgif[2]), stack = TRUE)
+for(i in 3:length(a_mgif)){
+  combined <- image_append(c(a_mgif[i], b_mgif[i]), stack = TRUE)
+  new_gif <- c(new_gif, combined)
+}
+
+new_gif
+#anim_save("~/Documents/comb.gif", animation = new_gif)
+```
+
+This simulation provides us with some useful rules of thumb for the natural variation of cumulative goals around the xG metric. Assuming a perfect model without bias and measurement error, cumulative goals will lie within a +/- 20% range around cumulative xG after one season (with 95% confidence). Variation within this range therefore is not necessarily out- or underperformance of xG, but can simply be driven by the natural variation of Bernoulli random variables.
+
+Similar rules are +/- 50% for 10 games and +/- 33% for half a season. Seasonal data is based on an average of 450 shots which may be quite different for top or poor teams: The ranges will be tighter for teams with high shooting output and wider for low shooting teams.
+
+Thanks to the Central Limit Theorem (CLT) we can make this analysis even more useful by deriving an analytic solution that does not rely on simulations. While the law of large numbers tells us that the sample mean will converge towards the expected value of a sequence of random variables, the CLT provides further details about the variability around the expected value given the sample size and the variance of the individual random variables (the larger the sample size and the smaller the variance, the lower the variance all else equal).
+
+Because our sequence of shots, modeled as Bernoulli random variables, all have different parameters (a shot's xG value) we cannot use the classical CLT which requires independent and identically distributed RVs. Thankfully there is a variation that relaxes the requirement of identical distribution: the Lyapunov CLT. 
+
+After checking that the Lyapunov condition holds (it generally does for Bernoulli sequences as long as the limit of the variances is not finite; some more background) [here](https://math.stackexchange.com/questions/2054592/do-bernoulli-random-variables-always-satisfy-the-lyapunov-condition){target="_blank"} we get that
+
+<p align="center">
+$\frac{1}{s_n} \sum_{i=1}^{n} (X_i - \mu_i) {\xrightarrow {d}} N(0,1)$
+</p>
+
+This means that the normalized difference of cumulative goals and cumulative xG converges in distribution to the standard normal distribution. Therefore
+
+<p align="center">
+$P(-1.96 < \frac{1}{s_n} \sum_{i=1}^{n} (X_i - \mu_i) < 1.96) \approx P(-1.96 < N(0,1) < 1.96) \approx 0.95$
+</p>
+
+and with a confidence of 95% we have that the difference between cumulative goals and xG lies between
+
+<p align="center">
+$P(-1.96s_n < \sum_{i=1}^{n} (X_i - \mu_i) < 1.96s_n)$ 
+</p>
+
+where $s_n = \sqrt{\sum_{i=1}^{n} \sigma_i^2}$, the square root of the sum of variance of the individual Bernoulli RVs.
+
+Given that xG distributions are fairly similar across teams, I proxy $\sigma_i^2$ with a random sample of xG data which gives me a value of 
+
+<p align="center">
+$\sigma_i^2 \approx 0.0878 \approx \frac{1}{12}$
+</p>
+
+We combine this with our above result to a new rule of thumb as a function of our shot sample size
+
+<p align="center">
+$P(-1.96 \sqrt{\frac{n}{12}} < \sum_{i=1}^{n} (X_i - \mu_i) < 1.96 \sqrt{\frac{n}{12}})$ 
+</p>
+
+or approximately
+
+<p align="center">
+$P(-\sqrt{\frac{n}{3}} < \sum_{i=1}^{n} (X_i - \mu_i) < \sqrt{\frac{n}{3}})$ 
+</p>
+
+For an arbitrary number of shots we now know how much deviation to expect (with 95% confidence) between cumulative xG and goals simple driven by the boolean outcome of shots. For example, let's say that we have xG and goals data for 100 teams based on 300 shots each. We expect that for only 5 teams actual goals deviate from cumulative xG by more than 10 goals ($\sqrt{\frac{300}{3}} = 10$) in either direction. Again, this assumes no modeling noise (in reality every model is imperfect and will misjudge shots by some degree).
+
+With this rule of thumb we can now investigate how actual xG models compare to this. Deviations from this rule should give us some insights on their modeling errors.
+
+## Comparison for Statsbomb and Understat models
+
+I have picked these two xG models because their data is widely available and they represent two levels of sophistication: while Statsbomb adds more proprietary features (like goalkeeper postioning, freeze frames and shot height) my understanding is that Understat is a basic xG model relying on common event data only (shot location, shot type, build up). It will be interesting to see how their behavior differs in the analysis outlined above.
+
+### Data
+
+I am pulling xG data for the Top 5 leagues and three seasons (2017/2018, 2018/2019 and 2019/2020) from fbref.com and understat.com. The history is limited by Statsbomb data while the league choice is limited by Understat.
+
+This leaves us with 294 team seasons of data for number of shots, cumulative xG and goals. For around 280 of these seasons we expect cumulative goals to lie in a range of $+/- \sqrt{\dfrac{\#shots}{8}}$ around cumulative xG. 
+
+Modeling errors could impact both the cumulative xG estimate for each team season (moving the mid-point of the range) as well as the width of the range which would lead to more goal paths lying outside of the above range. The number of these *outliers* should give us an indication of the quality of the model. As we look at the performance of both models we will also include a *non-model* that simply uses the average shot xG (11.5%).
+
+
+
+```{r Summary Statistic, echo=FALSE}
+xg_df <- read_csv("../data/xg_comp.csv", col_types = cols())
+
+xg_df <- xg_df %>%
+  mutate(xg_no_model = 0.11*shots) %>%
+  mutate(upper_sb = xg_statsbomb + sqrt(shots/3),
+         lower_sb = xg_statsbomb - sqrt(shots/3),
+         upper_us = xg_understat + sqrt(shots/3),
+         lower_us = xg_understat - sqrt(shots/3),
+         upper_nm = xg_no_model + sqrt(shots/3),
+         lower_nm = xg_no_model - sqrt(shots/3)) %>%
+  mutate(in_range_sb = if_else(goals <= upper_sb & goals >= lower_sb, 1, 0),
+         in_range_us = if_else(goals <= upper_us & goals >= lower_us, 1, 0),
+         in_range_nm = if_else(goals <= upper_nm & goals >= lower_nm, 1, 0)) %>%
+  mutate(xg_over_sb = goals - xg_statsbomb,
+         xg_over_us = goals - xg_understat,
+         xg_over_nm = goals - xg_no_model)
+
+table <- xg_df %>% summarize(mean_sb = mean(in_range_sb), 
+                    mean_us = mean(in_range_us),
+                    mean_nm = mean(in_range_nm),
+                    xg_over_sb = mean(xg_over_sb),
+                    xg_over_us = mean(xg_over_us),
+                    xg_over_nm = mean(xg_over_nm))
+
+sketch = htmltools::withTags(table(
+  class = 'display',
+  thead(
+    tr(
+      th(colspan = 3, 'Pecentage within 95% confidence interval'),
+      th(colspan = 3, 'Average Difference Between Goals and xG (By Season)')
+    ),
+    tr(
+      lapply(rep(c('Statsbomb', 'Understat', 'No Model'), 2), th)
+    )
+  )
+))
+
+dt <- datatable(table, container = sketch, rownames = FALSE, options = list(dom = 't')) %>%
+  formatPercentage(c(1, 2, 3), 1) %>%
+  formatRound(c(4, 5, 6), digits = 1)
+
+widgetframe::frameWidget(dt)
+
+```
+
+We observe that the Statsbomb model behaves much more similar to the perfect model and that a simple model like Understat's is closer to an even simpler *No Model*.
+
+Let's have a look if we can find any bias in the types of teams who's seasons do not fall in the 95% confidence interval. Only outliers are highlighted below. 
+
+```{r Bias Shot SB, echo=FALSE, message=FALSE, warning=FALSE}
+xg_df_sb<- xg_df %>%
+  arrange(shots) %>%
+  mutate(id = row_number()) %>%
+  mutate(in_range_sb = as.factor(in_range_sb)) %>%
+  mutate(color = if_else(goals > upper_sb, "#00A5FF", if_else(goals < lower_sb, "tomato2", "grey90")))
+
+sb <- ggplot(xg_df_sb) +
+  geom_point(aes(x = shots, y = goals, alpha = in_range_sb, color = color)) + 
+  geom_point(aes(x = shots, y = xg_statsbomb, alpha = in_range_sb), color = "grey90") + 
+  geom_point(aes(x = shots, y = upper_sb), color = "black", alpha = 0.05) + 
+  geom_point(aes(x = shots, y = lower_sb), color = "black", alpha = 0.05) +
+  stat_ellipse(aes(x = shots, y = goals, color = color), type = "norm", linetype = "dashed") +
+  xlim(200, NA) +
+  annotate("text", x = 250, y = 110, colour = "black", size = 3, label = "Sophisticated Model", angle = 0, hjust = 0) +
+  annotate("text", x = 600, y = 15, colour = "black", size = 3, label = "shots", angle = 0, hjust = 0) +
+  annotate("text", x = 200, y = 15, colour = "black", size = 3, label = "goals/xG", angle = 90, hjust = 0) +
+  geom_segment(aes(x = 200, y = 60, xend = 200, yend = 115), arrow = arrow(length = unit(0.2, "cm")), size = 0.3) +
+  geom_segment(aes(x = 650, y = 15, xend = 730, yend = 15), arrow = arrow(length = unit(0.2, "cm")), size = 0.3) +
+  scale_color_manual(values = c("#00A5FF" = "#00A5FF", "tomato2" = "tomato2", "grey90" = "grey90")) +
+  scale_alpha_manual(values = c("1" = 0.1, "0" = 1)) +
+  labs(subtitle = glue::glue("We do not see this bias for a sophisticated model. Teams <b style = 'color:#00A5FF'>overperforming</b> cumulative xG spread the whole range of shot volume")) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_markdown(size = 9),
+        plot.subtitle = element_markdown(size = 8),
+        axis.title = element_blank())
+```
+
+```{r Bias Shot US, echo=FALSE, message=FALSE, warning=FALSE}
+xg_df_us <- xg_df %>%
+  arrange(shots) %>%
+  mutate(id = row_number()) %>%
+  mutate(in_range_us = as.factor(in_range_us)) %>%
+  mutate(color = if_else(goals > upper_us, "#00A5FF", if_else(goals < lower_us, "tomato2", "grey90")))
+
+us <- ggplot(xg_df_us) +
+  geom_point(aes(x = shots, y = goals, alpha = in_range_us, color = color)) + 
+  geom_point(aes(x = shots, y = xg_understat, alpha = in_range_us), color = "grey90") + 
+  geom_point(aes(x = shots, y = upper_us), color = "black", alpha = 0.05) + 
+  geom_point(aes(x = shots, y = lower_us), color = "black", alpha = 0.05) +
+  stat_ellipse(aes(x = shots, y = goals, color = color), type = "norm", linetype = "dashed") +
+  xlim(200, NA) +
+  annotate("text", x = 250, y = 110, colour = "black", size = 3, label = "Naive Model", angle = 0, hjust = 0) +
+  # annotate("text", x = 600, y = 15, colour = "black", size = 3, label = "shots", angle = 0, hjust = 0) +
+  # annotate("text", x = 200, y = 15, colour = "black", size = 3, label = "goals/xG", angle = 90, hjust = 0) +
+  # geom_segment(aes(x = 200, y = 60, xend = 200, yend = 115), arrow = arrow(length = unit(0.2, "cm")), size = 0.3) +
+  # geom_segment(aes(x = 650, y = 15, xend = 730, yend = 15), arrow = arrow(length = unit(0.2, "cm")), size = 0.3) +
+  scale_color_manual(values = c("#00A5FF" = "#00A5FF", "tomato2" = "tomato2", "grey90" = "grey90")) +
+  scale_alpha_manual(values = c("1" = 0.1, "0" = 1)) +
+  labs(title = glue::glue("Naive xG models seem to show bias in xG estimation for teams with low and high shot volumes"),
+       subtitle = glue::glue("Teams that do <b style = 'color:tomato2'>underperform</b> cumulative xG tend to have low shot volume.")) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_markdown(size = 11),
+        plot.subtitle = element_markdown(size = 8),
+        axis.title = element_blank())
+```
+
+```{r Bias Shot Comb, echo=FALSE, message=FALSE, warning=FALSE}
+us / sb
+```
+
+## Sensitivity to measure of "top"
+
+The number of taken shots over a season is a pretty vague definition of "top team". To really investigate this relationship let's look at two other definitions of team quality: elo-rating and team market value. Because we do not want to use a definition that relies on the coincidental performance of a team to the xG data we have, we there use elo ratings in the summer prior to a season's xG data.
+
+```{r Bias Elo SB, echo=FALSE, message=FALSE, warning=FALSE}
+xg_df_sb<- xg_df %>%
+  arrange(elo) %>%
+  mutate(id = row_number()) %>%
+  mutate(in_range_sb = as.factor(in_range_sb)) %>%
+  mutate(color = if_else(goals > upper_sb, "#00A5FF", if_else(goals < lower_sb, "tomato2", "grey90")))
+
+sb <- ggplot(xg_df_sb) +
+  geom_point(aes(x = elo, y = goals, alpha = in_range_sb, color = color)) + 
+  geom_point(aes(x = elo, y = xg_statsbomb, alpha = in_range_sb), color = "grey90") + 
+  geom_point(aes(x = elo, y = upper_sb), color = "black", alpha = 0.05) + 
+  geom_point(aes(x = elo, y = lower_sb), color = "black", alpha = 0.05) +
+  stat_ellipse(aes(x = elo, y = goals, color = color), type = "t", linetype = "dashed") +
+  xlim(1200, 2200) +
+  annotate("text", x = 1300, y = 110, colour = "black", size = 3, label = "Sophisticated Model", angle = 0, hjust = 0) +
+  annotate("text", x = 1800, y = 15, colour = "black", size = 3, label = "elo rating", angle = 0, hjust = 0) +
+  annotate("text", x = 1200, y = 15, colour = "black", size = 3, label = "goals/xG", angle = 90, hjust = 0) +
+  geom_segment(aes(x = 1200, y = 60, xend = 1200, yend = 115), arrow = arrow(length = unit(0.2, "cm")), size = 0.3) +
+  geom_segment(aes(x = 1900, y = 15, xend = 2000, yend = 15), arrow = arrow(length = unit(0.2, "cm")), size = 0.3) +
+  scale_color_manual(values = c("#00A5FF" = "#00A5FF", "tomato2" = "tomato2", "grey90" = "grey90")) +
+  scale_alpha_manual(values = c("1" = 0.1, "0" = 1)) +
+  labs(subtitle = glue::glue("We do not see this bias for a sophisticated model. Teams <b style = 'color:#00A5FF'>overperforming</b> cumulative xG spread the whole range of shot volume")) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_markdown(size = 9),
+        plot.subtitle = element_markdown(size = 8),
+        axis.title = element_blank())
+```
+
+```{r Bias Elo US, echo=FALSE, message=FALSE, warning=FALSE}
+xg_df_us <- xg_df %>%
+  arrange(elo) %>%
+  mutate(id = row_number()) %>%
+  mutate(in_range_us = as.factor(in_range_us)) %>%
+  mutate(color = if_else(goals > upper_us, "#00A5FF", if_else(goals < lower_us, "tomato2", "grey90")))
+
+us <- ggplot(xg_df_us) +
+  geom_point(aes(x = elo, y = goals, alpha = in_range_us, color = color)) + 
+  geom_point(aes(x = elo, y = xg_understat, alpha = in_range_us), color = "grey90") + 
+  geom_point(aes(x = elo, y = upper_us), color = "black", alpha = 0.05) + 
+  geom_point(aes(x = elo, y = lower_us), color = "black", alpha = 0.05) +
+  stat_ellipse(aes(x = elo, y = goals, color = color), type = "t", linetype = "dashed") +
+  xlim(1200, 2200) +
+  annotate("text", x = 1300, y = 110, colour = "black", size = 3, label = "Naive Model", angle = 0, hjust = 0) +
+  # annotate("text", x = 600, y = 15, colour = "black", size = 3, label = "shots", angle = 0, hjust = 0) +
+  # annotate("text", x = 200, y = 15, colour = "black", size = 3, label = "goals/xG", angle = 90, hjust = 0) +
+  # geom_segment(aes(x = 200, y = 60, xend = 200, yend = 115), arrow = arrow(length = unit(0.2, "cm")), size = 0.3) +
+  # geom_segment(aes(x = 650, y = 15, xend = 730, yend = 15), arrow = arrow(length = unit(0.2, "cm")), size = 0.3) +
+  scale_color_manual(values = c("#00A5FF" = "#00A5FF", "tomato2" = "tomato2", "grey90" = "grey90")) +
+  scale_alpha_manual(values = c("1" = 0.1, "0" = 1)) +
+  labs(title = glue::glue("Naive xG models seem to show bias in xG estimation for teams with low and high shot volumes"),
+       subtitle = glue::glue("Teams that do <b style = 'color:tomato2'>underperform</b> cumulative xG tend to have low shot volume.")) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_markdown(size = 11),
+        plot.subtitle = element_markdown(size = 8),
+        axis.title = element_blank())
+```
+
+```{r Bias Elo Comb, echo=FALSE, message=FALSE, warning=FALSE}
+us / sb
+```
+
+TBA: analysis based on team value
+
+
+## Intuition
+
+We have introduced a measure to roughly quantify the varying quality of xG models. By comparing their behavior in analyzing shots from almost 300 team seasons to a hypothetical, true xG model we find that the more sophisticated Statsbomb model outperforms a simpler model represented by Understat data. 
+
+We further investigate if any of the models show a bias in analyzing shots of teams with either high or low shot volume. We find that naive xG models tend to underestimate expected goals for teams with high shot volume and overestimates xG for teams with low hot volume. We do not find this effect for the more sophisticated Statsbomb model that includes additional features like shot freeze frames, goalkeeper positioning and shot height.
+
+This effect may by driven by a systematic underestimation (overestimation) of xG for top (bottom) teams, but when conditioning on other metrics of team quality (elo rank and team value) we do not find this bias in either naive or sophisticated models.
+
+A possible explanation for these observations would be that top teams with higher shot volume are more careful about chosing their shooting opportunities and when in doubt (congested 18 yard box or akward shot height) recycle the ball instead of pulling the trigger.
+
+Along the way we also find some useful rules of thumb to help judge if goals actually significantly outperform cumulative xG or if they are within an interval consistent with the expected variation of Bernoulli random variables of a given sample size.
+
+- For a given cumulative xG value *x* based on *n* shots, we expect the resulting goal tally to lie within the interval $[x - \sqrt{\frac{n}{3}}, x + \sqrt{\frac{n}{3}}]$. For a sample size of 300 shots this range is 20 goals wide.
+
+- For a typical team (based on 450 shots of typical shot quality) goals vary 50% around cumulative xG after 10 games, 33% after half a season and 25% after a full season. These values are of course only rough guidelines.
+
+The above two rules seem to be consistent with David Sumpter's analysis in  [Should you write about real goals or expected goals?](https://soccermatics.medium.com/should-you-write-about-real-goals-or-expected-goals-a-guide-for-journalists-2cf0c7ec6bb6){target="_blank"}, but I hope to investigate this further at a later point.
+

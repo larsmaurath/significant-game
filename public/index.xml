@@ -6,10 +6,21 @@
     <description>Recent content on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 18 Oct 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 08 Dec 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Do Naive xG Models underestimate Expected Goals for Top Teams?</title>
+      <link>/portfolio/do-naive-xg-models-underestimate-expected-goals-for-top-teams/</link>
+      <pubDate>Tue, 08 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/do-naive-xg-models-underestimate-expected-goals-for-top-teams/</guid>
+      <description>Motivation After documenting the implementation of a simple xG model I have spent quite a bit of time thinking about what makes a good model and how you could go about quantifying its quality.
+A few weeks ago Tom Worville posted the below chart which sparked a bit of a discussion around the relationship between high shooting output and overperformance of xG.
+Look at how clinical Son&amp;#39;s been in terms of scoring above expected (t/t @Torvaney for the gridline idea here) pic.</description>
+    </item>
     
     <item>
       <title>First Look at SkillCorner&#39;s Open Source Tracking Dataset</title>

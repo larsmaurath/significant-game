@@ -3,12 +3,22 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>/portfolio/first-look-at-skillcorner-s-free-tracking-dataset/</loc>
-    <lastmod>2020-10-18T00:00:00+00:00</lastmod>
+    <loc>/portfolio/do-naive-xg-models-underestimate-expected-goals-for-top-teams/</loc>
+    <lastmod>2020-12-08T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>/portfolio/</loc>
+    <lastmod>2020-12-08T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/</loc>
+    <lastmod>2020-12-08T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/portfolio/first-look-at-skillcorner-s-free-tracking-dataset/</loc>
     <lastmod>2020-10-18T00:00:00+00:00</lastmod>
   </url>
   
@@ -19,11 +29,6 @@
   
   <url>
     <loc>/tags/</loc>
-    <lastmod>2020-10-18T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/</loc>
     <lastmod>2020-10-18T00:00:00+00:00</lastmod>
   </url>
   
