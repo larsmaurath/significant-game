@@ -28,13 +28,13 @@ Coincidentally, a few weeks ago [Tom Worville](https://twitter.com/Worville){tar
 blogdown::shortcode('tweet', '1332344663605456896')
 ```
 
-My intuition for this phenomenon is that high shooting output is a proxy for the quality of a team and that *naive* xG models underestimate the xG values for top teams. Given that xG models are usually by construction unbiased over all teams this also means that they should overestimate xG for poor teams. One channel how quality could impact xG over/underperformance is finishing quality of top players.
+My intuition for this phenomenon is that high shooting output is a proxy for the quality of a team and that *naive* xG models underestimate the xG values for top teams. Given that xG models are usually by construction unbiased over all teams this also means that they should overestimate xG for poor teams (one channel how quality could impact xG over/underperformance is the finishing quality of top players that tend to be employed by top teams).
 
 In this post I am trying to find evidence for my intuition. 
 
 ### Anecdotal evidence for Barcelona
 
-There is no doubt that Barcelona is one of the European top clubs and thanks to Statsbomb's freely available Messi data set we have a large number of shot information including their xG values. As you'll probably know, Statsbomb's xG model is more sophisticated than a common location-only model as they also include goalkeeper positioning, freeze frame data and shot impact height as features in their model. 
+There is no doubt that Barcelona is one of the European top clubs and thanks to Statsbomb's freely available Messi data set we have a large number of the club's shot information including xG values. As you'll probably know, Statsbomb's xG model is more sophisticated than a common location-only model as they also include goalkeeper positioning, freeze frame data and shot impact height as features in their model. 
 
 I'll start by comparing cumulative goals, Statsbomb xG values and Naive xG values to get a sense of their behavior. I use the term *Naive model* to describe models that primarily use shot location data with simple event classifiers like body part and build-up play. My expectation is that Statsbomb's xG model is the better model and therefore tracks cumulative goals closer once a reasonable sample size has been reached.
 
@@ -186,9 +186,9 @@ What we have seen so far now is that two different xG models, on a very high lev
 
 ### What deviation between goals and xG is abnormal?
 
-Even if we assume that we have a perfect xG model with no estimation error (i.e. the model captures all relevant and repeatable information that influences shot outcome) there will always be residual variance: A shot with true xG of let's say 0.5 can only either result in a goal or not, i.e. a Bernoulli distributed random variable with parameter equal to xG can only take values of 1 (goal) or 0 (non-goal).
+Even if we assume that we have a perfect xG model with no estimation error (i.e. the model captures all relevant and repeatable information that influences shot outcome) there will always be residual variance: a shot with true xG of let's say 0.5 can only either result in a goal or not, i.e. a Bernoulli distributed random variable with parameter equal to xG can only take values of 1 (goal) or 0 (non-goal).
 
-Below, in the top chart, I am simulating a large number of cumulative goal paths generated from the same sequence of cumulative xG. Cumulative xG is sampled from a typical distribution like the one we have seen above for Barcelona.
+Below in the top chart, I am simulating a large number of cumulative goal paths generated from the same sequence of cumulative xG. Cumulative xG is sampled from a typical distribution like the one we have seen above for Barcelona.
 
 ```{r Load All Shots For A Given Season, echo=FALSE}
 con <- DBI::dbConnect(RSQLite::SQLite(), dbname = "~/Documents/Blog/Data/data.sqlite")
@@ -415,7 +415,7 @@ This leaves us with 294 team seasons of data for number of shots, cumulative xG 
 
 Modeling errors would impact the cumulative xG estimate for each team season and therefore the mid-point of the range. The width of the range solely relies on the variance of a typical xG sample. As we have seen with the data for Barcelona there is not much variation in the distribution of xG values for different models.
 
-The frequency of these *outliers* should give us an indication of the quality of the model. As we look at the performance of both models we will also include a benchmark *non-model* that simply uses the average shot xG (11.5%) for every shot.
+The frequency of these *outliers* should give us an indication of the quality of the model. As we look at the performance of both models we will also include a benchmark *non-model* that simply uses the average xG (11.5%) for every shot.
 
 ```{r Summary Statistic, echo=FALSE}
 xg_df <- read_csv("../data/xg_comp.csv", col_types = cols())
@@ -478,6 +478,8 @@ Consider the two situations below:
 
 Both shots occur from a relatively similar location in open play. A Naive xG model would assign a similar xG value to both, ignoring the fact that the first shot goes through a congested 6 yard box. A human would possibly assign an xG of 0.4 to the first situation and 0.9 to the second. 
 
+Another great source for intuition on how additional features change xG estimates is the Statsbomb [article](https://statsbomb.com/2020/07/statsbomb-release-expected-goals-with-shot-impact-height/){target="_blank"} introducing *shot impact height*.
+
 To make this concept a bit clearer we can look at a schematic representation:
 
 ```{r xG noise schematic, echo=FALSE}
@@ -506,7 +508,7 @@ ggplot(data.frame(x = seq(0.02, 1, 0.01)), aes(x)) +
     data = df,
     aes(x, y, label = label),
     width = grid::unit(2, "in"),
-    height = grid::unit(0.5, "in"),
+    height = grid::unit(1, "in"),
     hjust = 0, vjust = 1, size = 4,
   ) +
   xlab("xG") +
@@ -526,7 +528,7 @@ In combination with our first simulation we now have a Beta-Bernoulli model: our
 
 Now comes the biggest mental leap in this post: by simulating various mean and variance parameters for the beta distribution (the proxy for model noise) and their subsequent behavior in our first simulation I will try to back out the noise within the Statsbomb and Understat xG models.
 
-We know that for a perfect xG model, 95% of cumulative goals lie within a certain range around cumulative xG. This drops only slightly for the Statsbomb data but more drastic for Understat. Which noise parameters (shift in the mean or level of variance) are consistent with such a behavior? 
+We know that for a perfect xG model, 95% of cumulative goals lie within a certain range around cumulative xG. This drops only slightly for the Statsbomb data (~93%) but more drastic for Understat (~76%). Which noise parameters (shift in the mean or level of variance) are consistent with such a behavior? 
 ```{r Simulation Table, echo=FALSE, message=FALSE, warning=FALSE}
 noise_sample <- function(mu, sigma_2){
   alpha <- mu*(mu*(1-mu)/sigma_2 - 1)
@@ -849,7 +851,11 @@ My intuition that high shot volume is a proxy for high quality teams does not se
 
 A lot of the things I have looked at overlap with David Sumpter's analysis in [Should you write about real goals or expected goals?](https://soccermatics.medium.com/should-you-write-about-real-goals-or-expected-goals-a-guide-for-journalists-2cf0c7ec6bb6){target="_blank"}. My view is that my results are consistent with his findings but offer a more granular view of the variability of goals around expected goals by relating it to the number of shots not games. I also highlight the difference the quality of an xG model makes.
 
-David answers two main questions: With what sample size does it make sense to start looking at xG values and when should you prefer actual goals over xG? In order to answer these questions I will initially deviate from David's guidance to again assume there is a hypothetical, perfect xG model who's output is superior even to goals at any sample size. Next I will measure noise to this hypothetical model for actual goals, a sophisticated model and a naive model. These two models are again proxied by the modeling errors I derived from Statsbomb and Understat data.
+David answers two main questions: With what sample size does it make sense to start looking at xG values and when should you prefer actual goals over xG? 
+
+In order to answer these questions I will initially deviate from David's guidance to again assume there is a hypothetical, perfect xG model who's output is superior even to goals at any sample size. 
+
+Next I will measure noise to this hypothetical model for actual goals, a sophisticated model and a naive model. These two models are again proxied by the modeling errors I derived from Statsbomb and Understat data.
 
 ```{r Animation Convergence, echo=FALSE}
 noise_sample <- function(mu, sigma_2){
@@ -973,7 +979,7 @@ I further investigate if any of the models show a bias in analyzing shots of tea
 
 This effect may by driven by a systematic underestimation (overestimation) of xG for top (bottom) teams, but when conditioning on another metric of team quality (Elo ranking) I do not find this bias in either naive or sophisticated models.
 
-A possible explanation for these observations would be that top teams with higher shot volume are more careful about choosing their shooting opportunities and when in doubt (congested 18 yard box or awkward shot height) recycle the ball instead of pulling the trigger.
+A possible explanation for these observations would be that top teams with higher shot volume are more careful about choosing their shooting opportunities and when in doubt (congested 18 yard box or awkward shot height) recycle the ball instead of pulling the trigger. Another explanation could be superior finishing ability of top players. The missing evidence when conditioning on Elo ranking however call my initial intuition into question.
 
 Along the way I also find some useful rules of thumb to help judge if goals actually significantly outperform cumulative xG or if they are within an interval consistent with the expected variation of Bernoulli random variables for a given sample size.
 
