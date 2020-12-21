@@ -405,13 +405,13 @@ With this rule of thumb we can now investigate how actual xG models compare to t
 
 Given that we now know a bit about how perfect xG models behave in relation to their deviation to cumulative goals over different sample sizes, we can now compare this to the behavior of the Statsbomb model and a Naive model. 
 
-The idea is to derive some kind of estimate for how similar they behave to a hypothetical, perfect xG model. For this analysis I will proxy the Naive model with data from Understat.com which, based on the information they share on their website, should be quite similar to the model I implemented previously. 
+The idea is to derive some kind of estimate for how similar they behave to a hypothetical, perfect xG model. For this analysis I will proxy the Naive model again with my own implementation which only relies on location based data.
 
 #### Data
 
-I am pulling xG data for the Top 5 leagues and three seasons (2017/2018, 2018/2019 and 2019/2020) from Statsbomb (via fbref.com) and understat.com. The history is limited by Statsbomb data while the league choice is limited by Understat.
+I am pulling xG data for the Top 5 leagues and three seasons (2017/2018, 2018/2019 and 2019/2020) from Statsbomb (via fbref.com).
 
-This leaves us with 294 team seasons of data for number of shots, cumulative xG (for both Statsbomb and Understat) and goals. For a perfect model we expect cumulative goals to lie in a range of $\textstyle{+/- \sqrt{\dfrac{\#shots}{8}}}$ around cumulative xG for around 280 of these seasons (95% of 294). Any deviation from this may indicate the presence of modeling error in the models. 
+This leaves us with 294 team seasons of data for number of shots, cumulative xG (for both Statsbomb and the Naive implementation) and goals. For a perfect model we expect cumulative goals to lie in a range of $\textstyle{+/- \sqrt{\dfrac{\#shots}{8}}}$ around cumulative xG for around 280 of these seasons (95% of 294). Any deviation from this may indicate the presence of modeling error in the models. 
 
 Modeling errors would impact the cumulative xG estimate for each team season and therefore the mid-point of the range. The width of the range solely relies on the variance of a typical xG sample. As we have seen with the data for Barcelona there is not much variation in the distribution of xG values for different models.
 
@@ -424,15 +424,15 @@ xg_df <- xg_df %>%
   mutate(xg_no_model = 0.11*shots) %>%
   mutate(upper_sb = xg_statsbomb + sqrt(shots/3),
          lower_sb = xg_statsbomb - sqrt(shots/3),
-         upper_us = xg_understat + sqrt(shots/3),
-         lower_us = xg_understat - sqrt(shots/3),
+         upper_us = xg_naive + sqrt(shots/3),
+         lower_us = xg_naive - sqrt(shots/3),
          upper_nm = xg_no_model + sqrt(shots/3),
          lower_nm = xg_no_model - sqrt(shots/3)) %>%
   mutate(in_range_sb = if_else(goals <= upper_sb & goals >= lower_sb, 1, 0),
          in_range_us = if_else(goals <= upper_us & goals >= lower_us, 1, 0),
          in_range_nm = if_else(goals <= upper_nm & goals >= lower_nm, 1, 0)) %>%
   mutate(xg_over_sb = goals - xg_statsbomb,
-         xg_over_us = goals - xg_understat,
+         xg_over_us = goals - xg_naive,
          xg_over_nm = goals - xg_no_model)
 
 table <- xg_df %>% summarize(mean_sb = mean(in_range_sb), 
@@ -450,7 +450,7 @@ sketch = htmltools::withTags(table(
       th(colspan = 3, 'Average Difference Between Goals and xG (By Season)')
     ),
     tr(
-      lapply(rep(c('Statsbomb', 'Understat', 'No Model'), 2), th)
+      lapply(rep(c('Statsbomb', 'Naive', 'No Model'), 2), th)
     )
   )
 ))
@@ -466,7 +466,7 @@ widgetframe::frameWidget(dt)
 
 ```
 
-We observe that the Statsbomb model behaves much more similar to the perfect model and that a simple model like Understat's is closer to an even simpler *No Model*.
+We observe that the Statsbomb model behaves much more similar to the perfect model and that a very simple model is closer to an even simpler *No Model*.
 
 How should we start thinking about these possible modeling errors? Let's assume we observe a shot and assign an xG value with our Naive model. Give that we are missing a lot of information (e.g. defender positioning) our result will be an average of all similar situations, no matter if the goal is empty or the 6 yard box is congested. Naive models try to overcome this with additional features like flags indicating that a shot occurs after a corner or fast break, but they can hardly be perfect.
 
@@ -526,9 +526,9 @@ We can also turn this thinking around: given a true xG value, poor models will g
 
 In combination with our first simulation we now have a Beta-Bernoulli model: our noisy model xG estimate is beta-distributed around the true xG value and resulting goals are then Bernoulli-distributed and parameterized with these noisy xG values.
 
-Now comes the biggest mental leap in this post: by simulating various mean and variance parameters for the beta distribution (the proxy for model noise) and their subsequent behavior in our first simulation I will try to back out the noise within the Statsbomb and Understat xG models.
+Now comes the biggest mental leap in this post: by simulating various mean and variance parameters for the beta distribution (the proxy for model noise) and their subsequent behavior in our first simulation I will try to back out the noise within the Statsbomb and the Naive xG models.
 
-We know that for a perfect xG model, 95% of cumulative goals lie within a certain range around cumulative xG. This drops only slightly for the Statsbomb data (~93%) but more drastic for Understat (~76%). Which noise parameters (shift in the mean or level of variance) are consistent with such a behavior? 
+We know that for a perfect xG model, 95% of cumulative goals lie within a certain range around cumulative xG. This drops only slightly for the Statsbomb data (~93%) but more drastic for the Naive model data (~81%). Which noise parameters (shift in the mean or level of variance) are consistent with such a behavior? 
 ```{r Simulation Table, echo=FALSE, message=FALSE, warning=FALSE}
 noise_sample <- function(mu, sigma_2){
   alpha <- mu*(mu*(1-mu)/sigma_2 - 1)
@@ -644,7 +644,7 @@ sketch = htmltools::withTags(table(
 
 res_wide <- res_wide %>% remove_rownames %>% column_to_rownames(var="bias")
 
-footer <- "Most likely bias and variance parameters for sampling beta distributions for Statsbomb (red) and Understat (blue) data. Table values are the average percentage of goal paths lying within the 95% confidence interval around cumulative model xG. Goal paths are generated based on hypothetical, true xG value. The confidence interval is symmetric around the cumulative xG value of the noisy model. Noise xG values are sampled from a beta distribution with mean equal to true xG (+ potential bias) and variance as indicated in the table. Given that even naive xG models are unbiased over large samples by definition (across multiple teams, leagues and seasons), the bias is only applied to 25% of the sample, (-1)*bias to another 25% and 50% remain unbiased."
+footer <- "Most likely bias and variance parameters for sampling beta distributions for Statsbomb (red) and Naive (blue) data. Table values are the average percentage of goal paths lying within the 95% confidence interval around cumulative model xG. Goal paths are generated based on hypothetical, true xG value. The confidence interval is symmetric around the cumulative xG value of the noisy model. Noise xG values are sampled from a beta distribution with mean equal to true xG (+ potential bias) and variance as indicated in the table. Given that even naive xG models are unbiased over large samples by definition (across multiple teams, leagues and seasons), the bias is only applied to 25% of the sample, (-1)*bias to another 25% and 50% remain unbiased."
 
 dt <- datatable(res_wide, 
                 container = sketch, 
@@ -654,18 +654,18 @@ dt <- datatable(res_wide,
   formatPercentage(c(1, 2, 3, 4, 5, 6, 7, 8), 1) %>%
   formatStyle(c(0), `border-right` = "solid 1px") %>%
   formatStyle(c('0.005', '0.01'), border = styleInterval(c(0.93, 0.94), c('auto', '2px solid #DC2228', 'auto'))) %>%
-  formatStyle(c('0.01', '0.02', '0.03'), border = styleInterval(c(0.60, 0.85), c('auto', '2px solid #91bfdb', 'auto')))
+  formatStyle(c('0.001', '0.005', '0.01', '0.02', '0.03'), border = styleInterval(c(0.80, 0.82), c('auto', '2px solid #91bfdb', 'auto')))
 
 widgetframe::frameWidget(dt)
 ```
 
-In the above table we see that Statsbomb's model is likely unbiased. Its behavior is most consistent with minimal bias and variance between 0.005 and 0.01. The Understat model likely contains some form of bias (between 0.02 and 0.03) and some variance. We can see below how this would look visualized for an example xG value of 0.25. We can see that the Statsbomb model gives us larger confidence in its estimate. Potential true xG values are narrowly distributed around the estimate. 
+In the above table we see that Statsbomb's model is likely unbiased. Its behavior is most consistent with minimal bias and variance between 0.005 and 0.01. The Naive model likely contains some form of bias (between 0.02 and 0.03) and some variance. We can see below how this would look visualized for an example xG value of 0.25. We can see that the Statsbomb model gives us larger confidence in its estimate. Potential true xG values are narrowly distributed around the estimate. 
 
 ```{r xG noise schematic 2, echo=FALSE}
 df <- data.frame(
   x = 0.5,
   y = 4,
-  label = "Distribution of likely, true xG values for <b style = 'color:#DC2228'>Statsbomb (bias: 0.005, variance: 0.005)</b> and <b style = 'color:#91bfdb'>Understat (bias: 0.025, variance: 0.02)</b> xG models"
+  label = "Distribution of likely, true xG values for <b style = 'color:#DC2228'>Statsbomb (bias: 0.005, variance: 0.005)</b> and <b style = 'color:#91bfdb'>Naive (bias: 0.02, variance: 0.01)</b> xG models"
 )
 
 mu <- 0.25 + 0.005
@@ -674,8 +674,8 @@ sigma_2 <- 0.005
 alpha <- mu*(mu*(1-mu)/sigma_2 - 1)
 beta <- (1-mu)*(mu*(1-mu)/sigma_2 - 1)
 
-mu <- 0.25 + 0.025
-sigma_2 <- 0.02
+mu <- 0.25 + 0.02
+sigma_2 <- 0.01
 
 alpha_2 <- mu*(mu*(1-mu)/sigma_2 - 1)
 beta_2 <- (1-mu)*(mu*(1-mu)/sigma_2 - 1)
@@ -713,9 +713,9 @@ We now have good indications that Naive xG models are biased for a certain subse
 
 To answer this, let's try to find bias in the types of teams who's seasons do not fall in the 95% confidence interval. 
 
-Below I am plotting cumulative goals vs shots from our 294 team seasons. I am only only highlighting goal data that lies outside the 95% confidence intervals for both Understat and Statsbomb xG estimates. Cumulative goals that lie above the interval are highlighted red, goals below the interval are highlighted blue. As expected we see many more data points highlighted for the Understat data than for Statsbomb's.
+Below I am plotting cumulative goals vs shots from our 294 team seasons. I am only only highlighting goal data that lies outside the 95% confidence intervals for both Naive and Statsbomb xG estimates. Cumulative goals that lie above the interval are highlighted red, goals below the interval are highlighted blue. As expected we see many more data points highlighted for the Naive data than for Statsbomb's.
 
-In the case of Understat, teams that outperform xG tend to be high volume shooters while teams that underperform are lower volume shooters. In other words the Naive model likely underestimates cumulative xG for teams with many shots and overestimates xG for teams with few shots. This mirrors the potential bias we already saw in our above analysis. Also consistent with above is that the sophisticated model does not show such a bias.
+In the case of the Naive Model, teams that outperform xG tend to be high volume shooters while teams that underperform are lower volume shooters. In other words the Naive model likely underestimates cumulative xG for teams with many shots and overestimates xG for teams with few shots. This mirrors the potential bias we already saw in our above analysis. Also consistent with above is that the sophisticated model does not show such a bias.
 
 ```{r Bias Shot SB, echo=FALSE, message=FALSE, warning=FALSE}
 xg_df_sb<- xg_df %>%
@@ -755,7 +755,7 @@ xg_df_us <- xg_df %>%
 
 us <- ggplot(xg_df_us) +
   geom_point(aes(x = shots, y = goals, alpha = in_range_us, color = color)) + 
-  geom_point(aes(x = shots, y = xg_understat, alpha = in_range_us), color = "grey90") + 
+  geom_point(aes(x = shots, y = xg_naive, alpha = in_range_us), color = "grey90") + 
   geom_point(aes(x = shots, y = upper_us), color = "black", alpha = 0.05) + 
   geom_point(aes(x = shots, y = lower_us), color = "black", alpha = 0.05) +
   stat_ellipse(aes(x = shots, y = goals, color = color), type = "norm", linetype = "dashed") +
@@ -821,7 +821,7 @@ xg_df_us <- xg_df %>%
 
 us <- ggplot(xg_df_us) +
   geom_point(aes(x = elo, y = goals, alpha = in_range_us, color = color)) + 
-  geom_point(aes(x = elo, y = xg_understat, alpha = in_range_us), color = "grey90") + 
+  geom_point(aes(x = elo, y = xg_naive, alpha = in_range_us), color = "grey90") + 
   geom_point(aes(x = elo, y = upper_us), color = "black", alpha = 0.05) + 
   geom_point(aes(x = elo, y = lower_us), color = "black", alpha = 0.05) +
   stat_ellipse(aes(x = elo, y = goals, color = color), type = "t", linetype = "dashed") +
@@ -855,7 +855,7 @@ David answers two main questions: With what sample size does it make sense to st
 
 In order to answer these questions I will initially deviate from David's guidance to again assume there is a hypothetical, perfect xG model who's output is superior even to goals at any sample size. 
 
-Next I will measure noise to this hypothetical model for actual goals, a sophisticated model and a naive model. These two models are again proxied by the modeling errors I derived from Statsbomb and Understat data.
+Next I will measure noise to this hypothetical model for actual goals, a sophisticated model and a naive model. These two models are again proxied by the modeling errors I derived from Statsbomb and Naive data.
 
 ```{r Animation Convergence, echo=FALSE}
 noise_sample <- function(mu, sigma_2){
@@ -884,7 +884,7 @@ for(i in 1:500){
     rowwise() %>%
     mutate(goals = rbinom(1, 1, xg)) %>%
     mutate(xg_soph = noise_sample(xg + 0.005, 0.01)) %>%
-    mutate(xg_naive = noise_sample(xg + 0.025, 0.02)) %>%
+    mutate(xg_naive = noise_sample(xg + 0.02, 0.01)) %>%
     ungroup()
 
   xg_sample$cum_xg <- cumsum(xg_sample$xg)
@@ -973,7 +973,7 @@ This really illustrates the power of a very good xG model. It allows you to act 
 
 ### Summary
 
-I have introduced a framework to roughly quantify the varying quality of xG models. By comparing their behavior in analyzing shots from almost 300 team seasons to a hypothetical, true xG model I find that the more sophisticated Statsbomb model outperforms a simpler model represented by Understat data. 
+I have introduced a framework to roughly quantify the varying quality of xG models. By comparing their behavior in analyzing shots from almost 300 team seasons to a hypothetical, true xG model I find that the more sophisticated Statsbomb model outperforms a simpler model. 
 
 I further investigate if any of the models show a bias in analyzing shots of teams with either high or low shot volume. I find that naive xG models tend to underestimate expected goals for teams with high shot volume and overestimates xG for teams with low shot volume. I do not find this effect for the more sophisticated Statsbomb model that includes additional features like shot freeze frames, goalkeeper positioning and shot impact height.
 
