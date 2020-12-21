@@ -124,8 +124,12 @@ if (!doNotTrack) {
 <script src="/rmarkdown-libs/widgetframe-binding/widgetframe.js"></script>
 
 
-<div id="motivation" class="section level2">
-<h2>Motivation</h2>
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="Do Naive xG Models underestimate Expected Goals for Top Teams?">
+<meta name="twitter:description" content="A proposal for a framework to quantify relative quality of Expected Goal models by comparing cumulative xG values to goals for a sample of team seasons. Goals naturally vary around cumulative xG as their outcome is boolean while xG values are a probability between 0 & 1.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/error_anim.gif">
 <p>After <a href="https://www.thesignificantgame.com/portfolio/expected-goals-model-with-tidymodels/" target="_blank">documenting</a> the implementation of a simple xG model I have spent quite a bit of time thinking about what makes a good model and how you could go about quantifying its quality.</p>
 <p>Coincidentally, a few weeks ago <a href="https://twitter.com/Worville" target="_blank">Tom Worville</a> posted the below chart which sparked a bit of a discussion around the relationship between high shooting output and overperformance of xG.</p>
 <blockquote class="twitter-tweet"><p lang="en" dir="ltr">Look at how clinical Son&#39;s been in terms of scoring above expected (t/t <a href="https://twitter.com/Torvaney?ref_src=twsrc%5Etfw">@Torvaney</a> for the gridline idea here) <a href="https://t.co/1fM5lO7BId">pic.twitter.com/1fM5lO7BId</a></p>&mdash; Tom Worville (@Worville) <a href="https://twitter.com/Worville/status/1332344663605456896?ref_src=twsrc%5Etfw">November 27, 2020</a></blockquote>
@@ -275,7 +279,6 @@ We can also turn this thinking around: given a true xG value, poor models will g
 <li><p>For a typical team (based on 450 shots of typical shot quality) goals vary 50% around cumulative xG after 10 games, 33% after half a season and 25% after a full season. These values are of course only rough guidelines.</p></li>
 <li><p>The above two rules seem to be consistent with David Sumpter’s analysis in <a href="https://soccermatics.medium.com/should-you-write-about-real-goals-or-expected-goals-a-guide-for-journalists-2cf0c7ec6bb6" target="_blank">Should you write about real goals or expected goals?</a></p></li>
 </ul>
-</div>
 </div>
 
          <div id="disqus_thread"></div>

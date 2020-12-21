@@ -4,11 +4,21 @@ author: Lars Maurath
 date: '2020-12-20'
 slug: do-naive-xg-models-underestimate-expected-goals-for-top-teams
 categories: []
-tags: []
+tags:
+  - Expected Goals
+  - xG
+  - Central Limit Theorem
+  - Simulation
 image: 'img/portfolio/error_anim.gif'
 showonlyimage: no
 ---
-## Motivation
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="Do Naive xG Models underestimate Expected Goals for Top Teams?">
+<meta name="twitter:description" content="A proposal for a framework to quantify relative quality of Expected Goal models by comparing cumulative xG values to goals for a sample of team seasons. Goals naturally vary around cumulative xG as their outcome is boolean while xG values are a probability between 0 & 1.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/error_anim.gif">
 
 After [documenting](https://www.thesignificantgame.com/portfolio/expected-goals-model-with-tidymodels/){target="_blank"} the implementation of a simple xG model I have spent quite a bit of time thinking about what makes a good model and how you could go about quantifying its quality.
 
@@ -932,7 +942,7 @@ ggplot(xg_sample_for_plot %>% filter(name %in% c("min_max_goal", "min_max_xg_sop
   annotate("text", x = 1800-20, y = 0.8, colour = "black", size = 3, label = "Four Seasons", angle = 90, hjust = 0) +
   transition_reveal(reveal_time) +
   view_follow(fixed_x = TRUE, fixed_y = TRUE) +
-  labs(title = glue::glue("<b>Relative, one-sided error (95% confidence interval) for Goals, </b><b style = 'color:#DC2228'>Sophisticated</b> and </b><b> and</b><b style = 'color:#91bfdb'>Naive</b><b> xG</b>"), 
+  labs(title = glue::glue("<b>Relative, one-sided error (95% confidence interval) for Goals, </b><b style = 'color:#DC2228'>Sophisticated</b></b><b> and </b><b style = 'color:#91bfdb'>Naive</b><b> xG</b>"), 
        subtitle = '{xg_sample_for_plot$text[as.integer(frame_along)*100*3]}') +
   xlab("shots") +
   theme_bw() +

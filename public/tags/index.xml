@@ -6,10 +6,46 @@
     <description>Recent content in Tags on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 18 Oct 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 20 Dec 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Central Limit Theorem</title>
+      <link>/tags/central-limit-theorem/</link>
+      <pubDate>Sun, 20 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/central-limit-theorem/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Expected Goals</title>
+      <link>/tags/expected-goals/</link>
+      <pubDate>Sun, 20 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/expected-goals/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Simulation</title>
+      <link>/tags/simulation/</link>
+      <pubDate>Sun, 20 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/simulation/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>xG</title>
+      <link>/tags/xg/</link>
+      <pubDate>Sun, 20 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/xg/</guid>
+      <description></description>
+    </item>
     
     <item>
       <title>SkillCorner</title>
@@ -39,15 +75,6 @@
     </item>
     
     <item>
-      <title>Expected Goals</title>
-      <link>/tags/expected-goals/</link>
-      <pubDate>Wed, 26 Aug 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/expected-goals/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>tidymodels</title>
       <link>/tags/tidymodels/</link>
       <pubDate>Wed, 26 Aug 2020 00:00:00 +0000</pubDate>
@@ -62,15 +89,6 @@
       <pubDate>Wed, 26 Aug 2020 00:00:00 +0000</pubDate>
       
       <guid>/tags/tidyverse/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>xG</title>
-      <link>/tags/xg/</link>
-      <pubDate>Wed, 26 Aug 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/xg/</guid>
       <description></description>
     </item>
     
