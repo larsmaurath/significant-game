@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>shiny on The Significant Game</title>
-    <link>/tags/shiny/</link>
-    <description>Recent content in shiny on The Significant Game</description>
+    <title>network on The Significant Game</title>
+    <link>/tags/network/</link>
+    <description>Recent content in network on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Sun, 03 Jan 2021 00:00:00 +0000</lastBuildDate>
     
-	<atom:link href="/tags/shiny/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/tags/network/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
@@ -20,17 +20,6 @@
       <description>As many year-end Twitter threads have highlighted: 2020 was a great year for soccer analytics. New open-sourced data sets have enabled a new wave of amateur content, while ever more sophisticated research is published by clubs, data providers and universities around the world.
 Having followed the space for a few years now it becomes increasingly difficult to follow and digest all relevant research.
 James Yorke, who obviously has much more experience and a better overview on research then me, already raised a similar concern more than a year ago.</description>
-    </item>
-    
-    <item>
-      <title>Lionel Messi - Free Kick Dashboard</title>
-      <link>/portfolio/lionel-messi-free-kick-dashboard/</link>
-      <pubDate>Mon, 20 Apr 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/portfolio/lionel-messi-free-kick-dashboard/</guid>
-      <description>I finally had some time to play around with the free Statsbomb data. I previously wanted to look into using the crosstalk package to link interactive charts and this data set which includes all of Messi’s La Liga free kicks gave me a good excuse.
- Launch Dashboard  
-The initial idea was to link the location of free kicks to their goal impact (or their impact outside of the goal as long as they are not blocked).</description>
     </item>
     
   </channel>

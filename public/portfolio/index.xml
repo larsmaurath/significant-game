@@ -6,10 +6,31 @@
     <description>Recent content in Portfolios on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 20 Dec 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 03 Jan 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/portfolio/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Introducing: Soccer Analytics Library</title>
+      <link>/portfolio/introducing-soccer-analytics-library/</link>
+      <pubDate>Sun, 03 Jan 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/introducing-soccer-analytics-library/</guid>
+      <description>As many year-end Twitter threads have highlighted: 2020 was a great year for soccer analytics. New open-sourced data sets have enabled a new wave of amateur content, while ever more sophisticated research is published by clubs, data providers and universities around the world.
+Having followed the space for a few years now it becomes increasingly difficult to follow and digest all relevant research.
+James Yorke, who obviously has much more experience and a better overview on research then me, already raised a similar concern more than a year ago.</description>
+    </item>
+    
+    <item>
+      <title>The Bayesian Penalty</title>
+      <link>/portfolio/the-bayesian-penalty/</link>
+      <pubDate>Fri, 25 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/the-bayesian-penalty/</guid>
+      <description>Finishing ability is a frequently discussed feature for xG models. It makes intuitive sense that a world class striker should have a higher scoring probability for a shot in the box than the odd defender getting a shot off after a corner. The reason why the player taking the shot is not a feature in any xG model I know is insufficient sample size.
+Of course a striker has a decent number of shot events over their career but not all of these are comparable like-for-like.</description>
+    </item>
     
     <item>
       <title>Do Naive xG Models underestimate Expected Goals for Top Teams?</title>

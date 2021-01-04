@@ -3,6 +3,46 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>/portfolio/introducing-soccer-analytics-library/</loc>
+    <lastmod>2021-01-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/network/</loc>
+    <lastmod>2021-01-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/networkd3/</loc>
+    <lastmod>2021-01-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/portfolio/</loc>
+    <lastmod>2021-01-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/shiny/</loc>
+    <lastmod>2021-01-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/</loc>
+    <lastmod>2021-01-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/</loc>
+    <lastmod>2021-01-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/portfolio/the-bayesian-penalty/</loc>
+    <lastmod>2020-12-25T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/tags/central-limit-theorem/</loc>
     <lastmod>2020-12-20T00:00:00+00:00</lastmod>
   </url>
@@ -18,22 +58,7 @@
   </url>
   
   <url>
-    <loc>/portfolio/</loc>
-    <lastmod>2020-12-20T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
     <loc>/tags/simulation/</loc>
-    <lastmod>2020-12-20T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/</loc>
-    <lastmod>2020-12-20T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/</loc>
     <lastmod>2020-12-20T00:00:00+00:00</lastmod>
   </url>
   
@@ -124,11 +149,6 @@
   
   <url>
     <loc>/portfolio/lionel-messi-free-kick-dashboard/</loc>
-    <lastmod>2020-04-20T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/shiny/</loc>
     <lastmod>2020-04-20T00:00:00+00:00</lastmod>
   </url>
   

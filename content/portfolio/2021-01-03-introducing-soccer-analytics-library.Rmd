@@ -1,0 +1,80 @@
+---
+title: 'Introducing: Soccer Analytics Library'
+author: Lars Maurath
+date: '2021-01-03'
+slug: introducing-soccer-analytics-library
+categories: []
+tags:
+  - shiny
+  - network
+  - networkd3
+image: 'img/portfolio/network.png'
+showonlyimage: no
+---
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="Introducing: Soccer Analytics Library">
+<meta name="twitter:description" content="As many year-end Twitter threads have highlighted: 2020 was a great year for soccer analytics. New open-sourced data sets have enabled a new wave of amateur content, while ever more sophisticated research is published by clubs, data providers and universities around the world. Having followed the space for a few years now it becomes increasingly difficult to follow and digest all relevant research. ">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/network.png">
+
+As many year-end Twitter threads have highlighted: 2020 was a great year for soccer analytics. New open-sourced data sets have enabled a new wave of amateur content, while ever more sophisticated research is published by clubs, data providers and universities around the world.
+
+Having followed the space for a few years now it becomes increasingly difficult to follow and digest all relevant research. 
+
+James Yorke, who obviously has much more experience and a better overview on research then me, already raised a similar concern more than a year ago.
+
+```{r echo=FALSE}
+blogdown::shortcode('tweet', '1170775444368568320')
+```
+
+<br>
+
+In this post I want to open-source a Shiny app I am planning to use to organize relevant research in the soccer analytics space. This tool can hopefully serve as a straight-forward tabular collection of research as well as a way to identify overlap between research topic, author and institution (via an interactive network chart).
+
+<center>
+
+[Soccer Analytics Library](https://larsmaurath.shinyapps.io/soccer-analytics-library){target="_blank"}
+
+</center>
+
+Find a few possible use cases below:
+
+#### Find all research on *xG models*
+
+Clicking on any node filters the table below.
+
+![](/portfolio/2021-01-03-introducing-soccer-analytics-library_files/topic.gif)
+
+<br>
+
+#### Find a certain paper by name and read its abstract
+
+The search functionality of the table makes it easy to filter by name.
+
+![](/portfolio/2021-01-03-introducing-soccer-analytics-library_files/paper.gif)
+
+<br>
+
+#### Find all papers by a certain author
+
+The dropdown filter on the left allows us to filter the graph by author to get a quick overview of their publications and research interests.
+
+![](/portfolio/2021-01-03-introducing-soccer-analytics-library_files/author.gif)
+
+<br>
+
+#### Filter for research published between 2011 and 2015
+
+By filtering by publication year we can observe changing research focus over time.
+
+![](/portfolio/2021-01-03-introducing-soccer-analytics-library_files/date.gif)
+
+## Contribute
+
+One person alone cannot possibly know and aggregate all relevant research. If you know a piece that is missing feel free to open an issue [on Github](https://github.com/larsmaurath/soccer-analytics-library){target="_blank"} with either the full information or at least the link, and I will add it. Research should be publicly available (not behind a paywall) and introduce a new concept to the community (quality over quantity).
+
+## Contribute
+
+Another option to interact with this tool is to clone the project on Github to then run a customized version locally. Instead of showing the abstracts in the table you could add your own nodes. The data in the table could be for a different set of papers altogether or the graph nodes may aggregate by another variable.
