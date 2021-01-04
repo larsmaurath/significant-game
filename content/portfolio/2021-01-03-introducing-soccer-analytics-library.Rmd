@@ -73,8 +73,8 @@ By filtering by publication year we can observe changing research focus over tim
 
 ## Contribute
 
-One person alone cannot possibly know and aggregate all relevant research. If you know a piece that is missing feel free to open an issue [on Github](https://github.com/larsmaurath/soccer-analytics-library){target="_blank"} with either the full information or at least the link, and I will add it. Research should be publicly available (not behind a paywall) and introduce a new concept to the community (quality over quantity).
+One person alone cannot possibly know and aggregate all relevant research. If you know a piece that is missing feel free to open an issue on [Github](https://github.com/larsmaurath/soccer-analytics-library){target="_blank"} and I will add it. Research should be publicly available (not behind a paywall) and introduce a new concept to the community (quality over quantity).
 
-## Contribute
+## Customize
 
 Another option to interact with this tool is to clone the project on Github to then run a customized version locally. Instead of showing the abstracts in the table you could add your own nodes. The data in the table could be for a different set of papers altogether or the graph nodes may aggregate by another variable.
