@@ -99,7 +99,7 @@ Click for technical details of the derivation
 <div id="data" class="section level4">
 <h4>Data</h4>
 <p>I am pulling xG data for the Top 5 leagues and three seasons (2017/2018, 2018/2019 and 2019/2020) from Statsbomb (via fbref.com).</p>
-<p>This leaves us with 294 team seasons of data for number of shots, cumulative xG (for both Statsbomb and the Naive implementation) and goals. For a perfect model we expect cumulative goals to lie in a range of <span class="math inline">\(\textstyle{+/- \sqrt{\dfrac{\#shots}{8}}}\)</span> around cumulative xG for around 280 of these seasons (95% of 294). Any deviation from this may indicate the presence of modeling error in the models.</p>
+<p>This leaves us with 294 team seasons of data for number of shots, cumulative xG (for both Statsbomb and the Naive implementation) and goals. For a perfect model we expect cumulative goals to lie in a range of <span class="math inline">\(\textstyle{+/- \sqrt{\dfrac{\#shots}{3}}}\)</span> around cumulative xG for around 280 of these seasons (95% of 294). Any deviation from this may indicate the presence of modeling error in the models.</p>
 <p>Modeling errors would impact the cumulative xG estimate for each team season and therefore the mid-point of the range. The width of the range solely relies on the variance of a typical xG sample. As we have seen with the data for Barcelona there is not much variation in the distribution of xG values for different models.</p>
 <p>The frequency of these <em>outliers</em> should give us an indication of the quality of the model. As we look at the performance of below models we will also include a benchmark <em>non-model</em> that simply uses the average xG (~11.5%) for every shot.</p>
 <div id="htmlwidget-1" style="width:100%;height:480px;" class="widgetframe html-widget"></div>
@@ -179,7 +179,7 @@ We can also turn this thinking around: given a true xG value for a shot, poor mo
 <p>Along the way I also find some useful rules of thumb to help judge if goals actually significantly outperform cumulative xG or if they are within an interval consistent with the expected variation of Bernoulli random variables for a given sample size.</p>
 <ul>
 <li><p>For a given cumulative xG value <em>x</em> based on <em>n</em> shots, we expect the resulting goal tally to lie within the interval <span class="math inline">\([x - \sqrt{\frac{n}{3}}, x + \sqrt{\frac{n}{3}}]\)</span>. As an example: for a sample size of 300 shots this range is 20 goals wide.</p></li>
-<li><p>For a typical team (based on 450 shots of typical shot quality) goals vary 50% around cumulative xG after 10 games, 33% after half a season and 25% after a full season. These values are of course only rough guidelines.</p></li>
+<li><p>For a typical team (based on 450 shots per season of typical shot quality) goals vary 50% around cumulative xG after 10 games, 33% after half a season and 25% after a full season. These values are of course only rough guidelines.</p></li>
 <li><p>The above two rules seem to be consistent with David Sumpter’s analysis in <a href="https://soccermatics.medium.com/should-you-write-about-real-goals-or-expected-goals-a-guide-for-journalists-2cf0c7ec6bb6" target="_blank">Should you write about real goals or expected goals?</a></p></li>
 </ul>
 </div>

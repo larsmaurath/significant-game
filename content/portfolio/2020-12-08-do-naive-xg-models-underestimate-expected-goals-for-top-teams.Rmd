@@ -417,7 +417,7 @@ The idea is to derive some kind of estimate for how similar they behave to a hyp
 
 I am pulling xG data for the Top 5 leagues and three seasons (2017/2018, 2018/2019 and 2019/2020) from Statsbomb (via fbref.com).
 
-This leaves us with 294 team seasons of data for number of shots, cumulative xG (for both Statsbomb and the Naive implementation) and goals. For a perfect model we expect cumulative goals to lie in a range of $\textstyle{+/- \sqrt{\dfrac{\#shots}{8}}}$ around cumulative xG for around 280 of these seasons (95% of 294). Any deviation from this may indicate the presence of modeling error in the models. 
+This leaves us with 294 team seasons of data for number of shots, cumulative xG (for both Statsbomb and the Naive implementation) and goals. For a perfect model we expect cumulative goals to lie in a range of $\textstyle{+/- \sqrt{\dfrac{\#shots}{3}}}$ around cumulative xG for around 280 of these seasons (95% of 294). Any deviation from this may indicate the presence of modeling error in the models. 
 
 Modeling errors would impact the cumulative xG estimate for each team season and therefore the mid-point of the range. The width of the range solely relies on the variance of a typical xG sample. As we have seen with the data for Barcelona there is not much variation in the distribution of xG values for different models.
 
@@ -1153,7 +1153,7 @@ Along the way I also find some useful rules of thumb to help judge if goals actu
 
 * For a given cumulative xG value *x* based on *n* shots, we expect the resulting goal tally to lie within the interval $[x - \sqrt{\frac{n}{3}}, x + \sqrt{\frac{n}{3}}]$. As an example: for a sample size of 300 shots this range is 20 goals wide.
 
-* For a typical team (based on 450 shots of typical shot quality) goals vary 50% around cumulative xG after 10 games, 33% after half a season and 25% after a full season. These values are of course only rough guidelines.
+* For a typical team (based on 450 shots per season of typical shot quality) goals vary 50% around cumulative xG after 10 games, 33% after half a season and 25% after a full season. These values are of course only rough guidelines.
 
 * The above two rules seem to be consistent with David Sumpter's analysis in [Should you write about real goals or expected goals?](https://soccermatics.medium.com/should-you-write-about-real-goals-or-expected-goals-a-guide-for-journalists-2cf0c7ec6bb6){target="_blank"}
 
