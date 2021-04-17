@@ -6,10 +6,20 @@
     <description>Recent content in Tracking Data on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 18 Oct 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 11 Apr 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/tracking-data/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Towards Crowdsourced Tracking Data?</title>
+      <link>/portfolio/towards-crowdsourced-tracking-data/</link>
+      <pubDate>Sun, 11 Apr 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/towards-crowdsourced-tracking-data/</guid>
+      <description>Over the past few months I have gone down a rabbit hole trying to work out what would be necessary to produce crowdsourced, publicly available tracking data. In this post I want to take stock of my progress so far, give an overview of the Narya API (an open-source computer vision API trained on broadcast footage) and introduce two projects I have started.
+With a growing analytics community there is ever more demand for more publicly available data and in particular tracking data.</description>
+    </item>
     
     <item>
       <title>First Look at SkillCorner&#39;s Open Source Tracking Dataset</title>

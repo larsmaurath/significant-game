@@ -6,10 +6,20 @@
     <description>Recent content on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 03 Jan 2021 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 11 Apr 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Towards Crowdsourced Tracking Data?</title>
+      <link>/portfolio/towards-crowdsourced-tracking-data/</link>
+      <pubDate>Sun, 11 Apr 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/portfolio/towards-crowdsourced-tracking-data/</guid>
+      <description>Over the past few months I have gone down a rabbit hole trying to work out what would be necessary to produce crowdsourced, publicly available tracking data. In this post I want to take stock of my progress so far, give an overview of the Narya API (an open-source computer vision API trained on broadcast footage) and introduce two projects I have started.
+With a growing analytics community there is ever more demand for more publicly available data and in particular tracking data.</description>
+    </item>
     
     <item>
       <title>Introducing: Soccer Analytics Library</title>
@@ -17,9 +27,9 @@
       <pubDate>Sun, 03 Jan 2021 00:00:00 +0000</pubDate>
       
       <guid>/portfolio/introducing-soccer-analytics-library/</guid>
-      <description>As many year-end Twitter threads have highlighted: 2020 was a great year for soccer analytics. New open-sourced data sets have enabled a new wave of amateur content, while ever more sophisticated research is published by clubs, data providers and universities around the world.
-Having followed the space for a few years now it becomes increasingly difficult to follow and digest all relevant research.
-James Yorke, who obviously has much more experience and a better overview on research then me, already raised a similar concern more than a year ago.</description>
+      <description>Quick Update
+If the app is not available through the usual link the likely cause is that the usage limit has been exceeded. You can continue to access all articles through a table below. You can also clone the project on Github and run the tool locally. Hopefully the app will be up again after a few days.
+As many year-end Twitter threads have highlighted: 2020 was a great year for soccer analytics.</description>
     </item>
     
     <item>

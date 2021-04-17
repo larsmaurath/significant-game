@@ -6,10 +6,19 @@
     <description>Recent content in Tags on The Significant Game</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 03 Jan 2021 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 11 Apr 2021 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Tracking Data</title>
+      <link>/tags/tracking-data/</link>
+      <pubDate>Sun, 11 Apr 2021 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/tracking-data/</guid>
+      <description></description>
+    </item>
     
     <item>
       <title>network</title>
@@ -80,15 +89,6 @@
       <pubDate>Sun, 18 Oct 2020 00:00:00 +0000</pubDate>
       
       <guid>/tags/skillcorner/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Tracking Data</title>
-      <link>/tags/tracking-data/</link>
-      <pubDate>Sun, 18 Oct 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/tracking-data/</guid>
       <description></description>
     </item>
     

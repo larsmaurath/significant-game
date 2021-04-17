@@ -1,0 +1,118 @@
+---
+title: Towards Crowdsourced Tracking Data?
+author: Lars Maurath
+date: '2021-04-11'
+slug: towards-crowdsourced-tracking-data
+categories: []
+tags:
+  - Tracking Data
+image: 'img/portfolio/tracking_1.png'
+showonlyimage: no
+---
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@thesignigame">
+<meta name="twitter:creator" content="@thesignigame">
+<meta name="twitter:title" content="Introducing: Soccer Analytics Library">
+<meta name="twitter:description" content="Over the past few months I have gone down a rabbit hole trying to work out what would be necessary to produce crowdsourced, publicly available tracking data. In this post I want to take stock of my progress so far, give an overview of the Narya API (an open-source computer vision API trained on broadcast footage) and introduce two projects I have started.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/larsmaurath/significant-game/master/public/img/portfolio/tracking_1.png">
+
+Over the past few months I have gone down a rabbit hole trying to work out what would be necessary to produce crowdsourced, publicly available tracking data. In this post I want to take stock of my progress so far, give an overview of the Narya API (an open-source computer vision API trained on broadcast footage) and introduce two projects I have started.
+
+With a growing analytics community there is ever more demand for more publicly available data and in particular tracking data. While there are whole seasons of event data available, tracking data is currently limited to individual games provided by Metrica Sports (anonymized matches) and SkillCorner (broadcast footage).
+
+Tracking data may actually be easier to generate than event data once you have a good model and an appropriate video feed. While event data currently needs manual tagging (I highly recommend StatsBomb's 360 launch event for some background on how they generate their event data), computer vision algorithms largely run on their own. However, the benefit of tracking data is relatively limited without corresponding event data. The best case scenario would likely be an overview of the location of each team's players and the ball but without individual players' names or actions.
+
+Keeping the above in mind, two tournaments stand out as a great first potential application of open-source tracking data: the men's 2018 and the women's 2019 world cup. For both tournaments, event data is publicly available (through the StatsBomb API) and Youtube has several full-match, tactical cam videos. 
+
+But first a quick intro to the Narya API. Narya is an open-source computer vision project released in January this year by Paul Garnier and Theophane Gregoir. 
+It takes care of all necessary steps to produce tracking data from a video feed: homography estimation (i.e. where is the pitch and what part of it are we looking at?), player identification (which group of pixels actually represent a player/human?) and player tracking (where is the player I have spotted in the last frame now?). The model was trained on broadcast footage and does a very decent job at the above tasks. 
+
+Paul and Theo also added a *possession value*-type model (I haven't checked it out yet) and have written about all the above in their [paper](https://arxiv.org/abs/2101.05388){target="_blank"}.
+
+<br><br>
+
+### Full game tracking data for world cups 2018 & 2019
+
+What do the men's 2018 and the women's 2019 world cup have in common? Publicly available event data and full game footage on Youtube. That makes them an ideal starting point for the quest for open-source tracking data.
+
+#### Training 
+
+The Narya API cannot simply be applied to tactical (vertical) cam footage as it has been trained on broadcast footage. It will especially struggle with the homography estimation. I have therefore retrained the model on vertical pitches, both for the keypoint and the player identification. You can find the resulting model weights at the bottom of the [Narya ReadMe](https://github.com/DonsetPG/narya){target="_blank"}. 
+
+To generate the training data I have used a streamlit app based on [BirdsPyView](https://github.com/rjtavares/BirdsPyView){target="_blank"} by [Ricardo Tavares](https://twitter.com/rjtavares){target="_blank"}. This app allows my to generate training data very efficiently. If you want to try it out you can find the code [here](https://github.com/larsmaurath/narya-label-creator){target="_blank"}.
+
+#### Results
+
+Below is a video of the model applied to the first minute of Germany's match against Mexico. The homography estimation and the player tracking are superimposed on the original footage which allows us to judge the performance of the model in real-time.
+
+```{r, eval=TRUE, echo=FALSE}
+blogdown::shortcode("youtube", "SKDNbWbAy8k")
+```
+
+<br><br>
+
+We observe that the homography estimation is very successful. The model very closely tracks the pitch most of the times. At first glance the player tracking also works quite well. However the devil's in the details and a few flaws stand out:
+
+- We frequently observe false positives (e.g. the large bounding box with the id 23 in the beginning)
+- The entity tracking (i.e. assigning the same id to the same object over multiple frames) works well but is not perfect
+- While it is less bad if the entity tracking drops the id of a player it sometimes also assigns the same id to two different ones (id 1 is initially assigned to a Mexican player, but switches to a German player after a few seconds)
+
+<br>
+
+#### Remaining Issues and Next Steps
+
+Even though the initial results look promising this is still far-off from producing high quality tracking data for a full match. A few remaining issues:
+
+- If we need to generate the data in chunks, can we stitch them together to not lose the entity information?
+- Can we sync our tracking data with event data to label individual players and use both data sets in parallel?
+- Can we identify the team of each player automatically from the dominant colors of each bounding box?
+
+
+<br><br>
+
+### Tracking data for corners of the 20/21 Champions League
+
+Tactical cam footage is quite rare. Thanks to coverage now common on streaming providers with on-demand libraries (on Paramount+ I can rewatch every game of this seasons' Champions League) and websites like footballia there is however quite a lot of broadcast material out there. While generating full game tracking data including player IDs is very hard to do (see above), focusing the application of the Narya API on limited parts of the game may be a better start.
+
+Inspired by Laurie Shaw's talk on corner strategies I started collecting corner footage for this year's Champions League. The ultimate goal is to generate tracking data for all corners of this season. Assuming an average of 10 corners per game and 125 games a season this leaves us with 1250 corners of which maybe two-thirds are fully covered by the broadcast.
+
+The advantage of this project is that we can readily use the already trained Narya model because we are using broadcast footage.
+
+<br>
+
+#### Challenges
+
+Corners are one of the harder parts of a soccer match to track, given how much overlap and crowding occurs in the box. We do observe that the player tracking does not work perfectly and likely needs some additional training on corner footage (some examples below).
+
+![](/portfolio/2021-04-11-towards-crowdsourced-tracking-data_files/tracking_1.png)
+
+![](/portfolio/2021-04-11-towards-crowdsourced-tracking-data_files/tracking_2.png)
+
+For this reason there is an ongoing effort on the [Narya discussion page](https://github.com/DonsetPG/narya/discussions/27){target="_blank"} to produce additional training data.
+
+It would of course also be helpful to enrich this tracking data with event data that at least covers who took the corner and who received it, if it was successful, resulted in a goal and so on.
+
+#### Streamlit App
+
+I have also set up a basic Streamlit app for people to play around with the Narya API. This app currently runs on a free Streamlit server and is relatively slow, but has the advantage that no coding knowledge is needed. If you do get an error that the resources are exhausted you will need to take one of the routes further down.
+
+[https://share.streamlit.io/larsmaurath/narya-streamlit-viewer/streamlit/narya_viewer.py](https://share.streamlit.io/larsmaurath/narya-streamlit-viewer/streamlit/narya_viewer.py){target="_blank"}
+
+If you are happy to run a Google Colab you can also access the same via:
+
+[https://colab.research.google.com/drive/1RvhWfaFD1V0I37Ul8sF-vyrdGK74ooWA?usp=sharing](https://colab.research.google.com/drive/1RvhWfaFD1V0I37Ul8sF-vyrdGK74ooWA?usp=sharing){target="_blank"}
+
+You cans also run it locally by cloning the Github repo:
+
+[https://github.com/larsmaurath/narya-streamlit-viewer](https://github.com/larsmaurath/narya-streamlit-viewer){target="_blank"}
+
+The app is currently experimental, so don't expect it to run super smoothly. I am also planning to add some more functionality like a manual overwrite to add bounding boxes the model is missing.
+
+<br><br>
+
+### What Crowdsourced Tracking Data Won't Do
+
+In my opinion it is very unlikely that open-source computer vision libraries will replace tracking data by professional data providers. The challenges highlighted above can be summarized in that the last 20% of producing this data reliably at scale will take up 80% of the effort. The devil lies in the detail.
+
+It could however add value to underserved sports that do not have the financial firepower that makes them worthy markets for data providers. As long as there is enough interest to produce training data and there is reliable broadcasting footage tracking data is possible. This of course also applies to amateur soccer. One questions remains though: what is tracking data worth without synced event data?
